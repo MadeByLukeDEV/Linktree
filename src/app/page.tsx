@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import * as profileService from "@/modules/profile/service";
 import * as socialLinksService from "@/modules/social-links/service";
+import * as twitchService from "@/modules/twitch/service";
 import { PublicProfileHeader } from "@/modules/profile/components/public-profile-header";
 import { PublicLinkList } from "@/modules/social-links/components/public-link-list";
 import { YoutubeSection } from "@/modules/youtube/components/youtube-section";
@@ -16,9 +17,10 @@ import { ThemeToggle } from "@/modules/theme/components/theme-toggle";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [profile, groupedLinks] = await Promise.all([
+  const [profile, groupedLinks, twitchLive] = await Promise.all([
     profileService.getProfile(),
     socialLinksService.listGroupedVisible(),
+    twitchService.isLive(),
   ]);
 
   return (
@@ -33,6 +35,7 @@ export default async function Home() {
         <PublicLinkList
           ungrouped={groupedLinks.ungrouped}
           groups={groupedLinks.groups}
+          twitchLive={twitchLive}
         />
         <div className="flex items-center gap-2">
           <LocaleSwitcher />

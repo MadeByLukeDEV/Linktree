@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "create-owner": "tsx scripts/create-owner.ts",
-    "create-moderator": "tsx scripts/create-moderator.ts"
+    "create-moderator": "tsx scripts/create-moderator.ts",
+    "register-twitch-webhook": "tsx scripts/register-twitch-webhook.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

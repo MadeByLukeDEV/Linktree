@@ -272,11 +272,20 @@ cache hits/invalidation verified live). The app's Redis ACL user also lacks
 one-off scripts outside the app's normal request path, `GET`/`DEL` on
 `redirect:*` keys threw `NOPERM` even though the exact same keys were
 readable/writable through the app's own long-lived connection — never
-root-caused (possibly an ACL being tuned live on the server side), but
-harmless in practice because every Redis call in the app is written to fail
-soft regardless. Because of that history, every Redis call in the app
-(`src/lib/redirect-cache.ts`, `src/modules/redirects/service.ts`) is
-written to fail soft: a failed cache read/write is logged and swallowed,
+root-caused (possibly an ACL being tuned live on the server side).
+**Update while building the Twitch live-badge feature**: this isn't
+scoped to ad-hoc scripts after all — an entire dev server session (the
+app's own normal long-lived connection) hit `NOPERM` on every single
+Redis call, `youtube:latest` included, for the whole session, then a later
+session worked fine. So this is intermittent at the whole-connection
+level, not something specific to key prefix or caller — treat any
+Redis-related dev-session weirdness as "check reachability/ACL state right
+now" rather than assuming new code caused it. Still harmless in practice
+either way, because every Redis call in the app is written to fail soft
+regardless. Because of that history, every Redis call in the app
+(`src/lib/redirect-cache.ts`, `src/modules/redirects/service.ts`,
+`src/modules/twitch/service.ts`) is written to fail soft: a failed cache
+read/write is logged and swallowed,
 falling back to the database, never allowed to fail the write/redirect that
 triggered it. `src/lib/redis.ts` also caps `maxRetriesPerRequest`/backoff so
 a dead Redis degrades gracefully instead of hanging. If Redis-dependent
@@ -391,6 +400,56 @@ invalidation on edit/delete is immediate.
 Requires wildcard DNS (`*.aboutselphy.com`) and matching Dokploy domain
 config in production — see the "Dokploy deployment" section below.
 
+## Twitch live badge
+
+`src/modules/twitch/` shows a small pulsing red dot on the Twitch link's
+icon on the public page when the broadcaster is currently live, and
+nothing at all otherwise. Push-based via Twitch's EventSub webhooks, not
+polling — `src/app/api/twitch/eventsub/route.ts` receives
+`stream.online`/`stream.offline` notifications and writes a boolean into
+Redis (`twitch:live`, 12h safety-net TTL in case an offline event is ever
+dropped), which `src/app/page.tsx` reads on every request and threads down
+through `PublicLinkList` → `LinkRow` as a `twitchLive` prop (matched
+against the link whose `platform` is "twitch", case-insensitive). No DB
+dependency, and gracefully skips rendering (`isTwitchConfigured()`) when
+`TWITCH_BROADCASTER_LOGIN`/`TWITCH_WEBHOOK_SECRET` are unset.
+
+- **Setup is a one-time script, not something the app does itself**: `pnpm
+  register-twitch-webhook` (`scripts/register-twitch-webhook.ts`) gets an
+  app access token via `TWITCH_CLIENT_ID`/`TWITCH_CLIENT_SECRET`, looks up
+  the broadcaster's numeric id from `TWITCH_BROADCASTER_LOGIN`, and creates
+  the two EventSub subscriptions pointed at
+  `${NEXT_PUBLIC_SITE_URL}/api/twitch/eventsub`.
+- **This can only be run against a deployed, publicly reachable instance,
+  never localhost** — Twitch calls the callback URL synchronously during
+  registration to verify it's reachable (the
+  `webhook_callback_verification` branch in the route handler), so the app
+  must already be live at that URL first. `scripts/list-twitch-subscriptions.ts`
+  is a read-only helper if a subscription gets stuck
+  `webhook_callback_verification_pending`/`_failed`.
+- **Signature verification** (`verifyEventSubSignature` in
+  `modules/twitch/service.ts`) follows Twitch's spec exactly: HMAC-SHA256
+  over `messageId + messageTimestamp + rawBody` using
+  `TWITCH_WEBHOOK_SECRET`, compared with `timingSafeEqual`. The route
+  handler reads the body with `request.text()` (not `.json()`) specifically
+  so the signature is verified against the exact raw bytes Twitch signed,
+  before parsing it — re-serializing parsed JSON can produce different
+  bytes and silently break verification.
+- Verified locally end-to-end short of the real Twitch handshake (which
+  needs a public callback, so it can't run against localhost): crafted a
+  correctly-signed request by hand and confirmed a bad signature is
+  rejected (403), the `webhook_callback_verification` challenge is echoed
+  back verbatim, and `stream.online`/`stream.offline` notifications toggle
+  the badge. That test run happened to hit the pre-existing Redis `NOPERM`
+  flakiness documented above (it affected the already-working YouTube cache
+  identically in the same session) — confirmed via server logs that the
+  app issued exactly the right Redis commands regardless, so this is that
+  known infra issue, not a bug in this feature. The real EventSub handshake
+  against the deployed callback URL still needs a live check once
+  `TWITCH_CLIENT_ID`/`TWITCH_CLIENT_SECRET`/`TWITCH_BROADCASTER_LOGIN`/
+  `TWITCH_WEBHOOK_SECRET` are set in Dokploy and `pnpm
+  register-twitch-webhook` has actually been run against production.
+
 ## i18n
 
 `next-intl`, deliberately **without locale-prefixed routing** (no
@@ -450,7 +509,13 @@ DB access, not to run inside the container.
 real `https://social.aboutselphy.com`), `PASSKEY_RP_ID` (`aboutselphy.com`
 — must match the real domain or WebAuthn will reject registration/auth),
 `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`, `NEXT_PUBLIC_SITE_URL` (same as
-`BETTER_AUTH_URL`), `NEXT_PUBLIC_ROOT_DOMAIN` (`aboutselphy.com`).
+`BETTER_AUTH_URL`), `NEXT_PUBLIC_ROOT_DOMAIN` (`aboutselphy.com`),
+`TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_BROADCASTER_LOGIN`,
+`TWITCH_WEBHOOK_SECRET` (all optional — see the "Twitch live badge"
+section below). After deploying with those set, run `pnpm
+register-twitch-webhook` locally (against the production `DATABASE_URL`/
+env) to actually create the EventSub subscriptions — the env vars alone
+don't register anything with Twitch.
 
 **Domain/DNS**: the app listens on port 3000 (`EXPOSE 3000`) inside the
 container. Point Dokploy's domain config at this service for both
@@ -583,3 +648,21 @@ page imports it — regardless of whether that page ever actually calls it.
       back to ungrouped rather than being deleted, public page renders the
       section heading) with temporary test data cleaned up from the shared
       prod/dev database afterward.
+- [x] Twitch live badge — see the dedicated section above. Webhook route,
+      signature verification, and Redis toggle verified locally with a
+      hand-crafted signed request; the real Twitch EventSub handshake still
+      needs a live check once registered against the deployed callback URL.
+- [x] Public link-list hover animation pass — `PublicLinkList`'s `LinkRow`
+      (`src/modules/social-links/components/public-link-list.tsx`) now uses
+      Framer Motion variants (`rest`/`hover`/`tap`) instead of a bare CSS
+      `hover:bg-muted`: the whole row scales up, lifts, and gains a
+      brand-color glow (`boxShadow`) on hover, its icon does a small
+      rotate + scale bounce, and the platform label nudges right — all
+      declared as variants on the row so the icon/label pick up the
+      propagated hover/tap state without each needing its own
+      `whileHover` prop. Deliberately scoped to the public page only, not
+      the dashboard's draggable `LinkList` — that list's `SortableLinkRow`
+      already documents a real transform-ownership conflict between
+      continuously-active Framer Motion props and dnd-kit's drag
+      positioning (see the Frontend conventions section above), which
+      doesn't apply here since this list has no drag-and-drop.
