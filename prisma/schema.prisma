@@ -117,20 +117,41 @@ model Profile {
 // public profile (showOnProfile), exposed as a subdomain forward
 // (subdomain), or both. modules/redirects reads `subdomain` read-only via
 // this module's public service, never directly.
+//
+// LinkGroup lets links be organized into named sections (e.g. "Partners",
+// "Merch") on both the dashboard and the public page. A link's `order` is
+// scoped to its bucket (its group, or the ungrouped bucket when groupId is
+// null) rather than being one global sequence -- see repository.ts. Deleting
+// a group sets its links' groupId back to null (SetNull) rather than
+// deleting them; they fall back into the ungrouped bucket.
 // ---------------------------------------------------------------------------
 
+model LinkGroup {
+  id        String       @id @default(cuid())
+  label     String
+  order     Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  links     SocialLink[]
+
+  @@map("link_group")
+}
+
 model SocialLink {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   platform      String
   label         String
-  url           String   @db.VarChar(2048)
-  icon          String?  @db.VarChar(2048)
-  order         Int      @default(0)
-  showOnProfile Boolean  @default(true)
-  subdomain     String?  @unique
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  url           String     @db.VarChar(2048)
+  icon          String?    @db.VarChar(2048)
+  order         Int        @default(0)
+  showOnProfile Boolean    @default(true)
+  subdomain     String?    @unique
+  groupId       String?
+  group         LinkGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
+  @@index([groupId])
   @@map("social_link")
 }
 

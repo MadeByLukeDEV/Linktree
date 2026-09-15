@@ -40,12 +40,21 @@
       "subdomain": "Subdomain-Weiterleitung (optional)",
       "subdomainPreview": "{subdomain}.{rootDomain} leitet zu dieser URL weiter",
       "showOnProfile": "Auf Profil anzeigen",
+      "group": "Gruppe",
+      "noGroup": "Keine Gruppe",
       "saving": "Wird gespeichert…",
       "saveChanges": "Änderungen speichern",
       "linkAdded": "Link hinzugefügt",
       "linkUpdated": "Link aktualisiert",
       "linkDeleted": "Link gelöscht",
-      "hidden": "ausgeblendet"
+      "hidden": "ausgeblendet",
+      "addGroup": "Gruppe hinzufügen",
+      "editGroup": "Gruppe bearbeiten",
+      "groupName": "Gruppenname",
+      "groupAdded": "Gruppe hinzugefügt",
+      "groupUpdated": "Gruppe aktualisiert",
+      "groupDeleted": "Gruppe gelöscht",
+      "groupEmpty": "Noch keine Links in dieser Gruppe."
     },
     "Profile": {
       "displayName": "Anzeigename",

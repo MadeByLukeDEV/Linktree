@@ -21,6 +21,13 @@ export const socialLinkSchema = z.object({
   icon: z.union([z.url(), z.literal("")]).optional(),
   showOnProfile: z.boolean(),
   subdomain: z.union([subdomainSchema, z.literal("")]).optional(),
+  groupId: z.union([z.string(), z.literal("")]).optional(),
 });
 
 export type SocialLinkInput = z.infer<typeof socialLinkSchema>;
+
+export const linkGroupSchema = z.object({
+  label: z.string().trim().min(1, "Required").max(100),
+});
+
+export type LinkGroupInput = z.infer<typeof linkGroupSchema>;

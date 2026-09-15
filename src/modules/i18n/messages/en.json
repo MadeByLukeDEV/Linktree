@@ -40,12 +40,21 @@
       "subdomain": "Subdomain forward (optional)",
       "subdomainPreview": "{subdomain}.{rootDomain} will redirect to this URL",
       "showOnProfile": "Show on profile",
+      "group": "Group",
+      "noGroup": "No group",
       "saving": "Saving…",
       "saveChanges": "Save changes",
       "linkAdded": "Link added",
       "linkUpdated": "Link updated",
       "linkDeleted": "Link deleted",
-      "hidden": "hidden"
+      "hidden": "hidden",
+      "addGroup": "Add group",
+      "editGroup": "Edit group",
+      "groupName": "Group name",
+      "groupAdded": "Group added",
+      "groupUpdated": "Group updated",
+      "groupDeleted": "Group deleted",
+      "groupEmpty": "No links in this group yet."
     },
     "Profile": {
       "displayName": "Display name",

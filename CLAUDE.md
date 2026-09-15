@@ -566,3 +566,20 @@ page imports it — regardless of whether that page ever actually calls it.
       deleted from the shared prod/dev database) via Playwright: dashboard
       redirect/tab visibility per role, link CRUD as a moderator, and that
       the owner's own dashboard is unaffected.
+- [x] Link groups — `LinkGroup` model (`prisma/schema.prisma`), one optional
+      group per link (`SocialLink.groupId`, `onDelete: SetNull`). Dashboard:
+      `GroupFormDialog` (create/rename), `LinkList` renders the ungrouped
+      bucket first (no header) followed by named-group sections, each a
+      drag-reorderable block (`SortableGroupSection`) with its own nested
+      drag-reorderable link list (`LinkBucket`) — groups reorder amongst
+      themselves via one `DndContext`, links reorder within their bucket via
+      a separate nested one per bucket; links move between buckets only via
+      the edit-link form's Group `Select`, never by dragging across buckets.
+      Public page (`PublicLinkList`) mirrors the same ungrouped-first,
+      named-sections-below layout, hiding any group with zero visible links.
+      `order` is scoped per bucket, not global — see `repository.ts`'s
+      `nextOrder(groupId)`. Verified live end-to-end (create group, add a
+      link into it, rename the group, delete it and confirm the link falls
+      back to ungrouped rather than being deleted, public page renders the
+      section heading) with temporary test data cleaned up from the shared
+      prod/dev database afterward.

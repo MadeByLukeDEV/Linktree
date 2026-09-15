@@ -16,9 +16,9 @@ import { ThemeToggle } from "@/modules/theme/components/theme-toggle";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [profile, links] = await Promise.all([
+  const [profile, groupedLinks] = await Promise.all([
     profileService.getProfile(),
-    socialLinksService.listVisible(),
+    socialLinksService.listGroupedVisible(),
   ]);
 
   return (
@@ -30,7 +30,10 @@ export default async function Home() {
             <YoutubeSection />
           </Suspense>
         ) : null}
-        <PublicLinkList links={links} />
+        <PublicLinkList
+          ungrouped={groupedLinks.ungrouped}
+          groups={groupedLinks.groups}
+        />
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
           <ThemeToggle />

@@ -16,10 +16,10 @@ import { DashboardHeader } from "./dashboard-header";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [session, profile, links, t] = await Promise.all([
+  const [session, profile, groupedLinks, t] = await Promise.all([
     auth.api.getSession({ headers: await headers() }),
     profileService.getProfile(),
-    socialLinksService.listAll(),
+    socialLinksService.listGroupedAll(),
     getTranslations("Dashboard"),
   ]);
 
@@ -46,7 +46,11 @@ export default async function DashboardPage() {
 
           <div className="rounded-2xl border border-border bg-card p-[clamp(1rem,3vw,1.5rem)] shadow-sm">
             <TabsContent value="links">
-              <LinkList initialLinks={links} rootDomain={rootDomain} />
+              <LinkList
+                initialUngrouped={groupedLinks.ungrouped}
+                initialGroups={groupedLinks.groups}
+                rootDomain={rootDomain}
+              />
             </TabsContent>
 
             {canEditProfile ? (

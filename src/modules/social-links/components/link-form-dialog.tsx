@@ -13,11 +13,18 @@ import {
   createSocialLinkAction,
   updateSocialLinkAction,
 } from "@/modules/social-links/actions";
-import type { SocialLink } from "@/generated/prisma/client";
+import type { SocialLink, LinkGroup } from "@/generated/prisma/client";
 import { BrandIcon } from "@/modules/social-links/components/brand-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogTrigger,
@@ -38,11 +45,13 @@ export function LinkFormDialog({
   link,
   trigger,
   rootDomain,
+  groups,
   onSuccess,
 }: {
   link?: SocialLink;
   trigger: ReactElement;
   rootDomain: string;
+  groups: LinkGroup[];
   onSuccess: (link: SocialLink) => void;
 }) {
   const t = useTranslations("Dashboard.Links");
@@ -66,6 +75,7 @@ export function LinkFormDialog({
       icon: link?.icon ?? "",
       showOnProfile: link?.showOnProfile ?? true,
       subdomain: link?.subdomain ?? "",
+      groupId: link?.groupId ?? "",
     },
   });
 
@@ -74,6 +84,7 @@ export function LinkFormDialog({
   const platform = watch("platform");
   const url = watch("url");
   const icon = watch("icon");
+  const groupId = watch("groupId");
 
   async function onSubmit(data: SocialLinkInput) {
     setFormError(null);
@@ -150,6 +161,28 @@ export function LinkFormDialog({
               <Input id="icon" type="url" {...register("icon")} />
               <FieldDescription>{t("iconUrlHint")}</FieldDescription>
               <FieldError errors={errors.icon ? [errors.icon] : undefined} />
+            </Field>
+
+            <Field orientation="horizontal">
+              <FieldLabel htmlFor="group">{t("group")}</FieldLabel>
+              <Select
+                value={groupId || "none"}
+                onValueChange={(value) =>
+                  setValue("groupId", !value || value === "none" ? "" : value)
+                }
+              >
+                <SelectTrigger id="group" className="w-full">
+                  <SelectValue placeholder={t("noGroup")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("noGroup")}</SelectItem>
+                  {groups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             <Field
