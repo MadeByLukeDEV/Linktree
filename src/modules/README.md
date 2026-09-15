@@ -25,9 +25,10 @@ self-contained modules with enforced boundaries.
 | Module         | Owns                                              | Depends on            |
 |----------------|----------------------------------------------------|-----------------------|
 | `auth`         | BetterAuth instance, admin plugin, session helpers | —                      |
-| `social-links` | `SocialLink` table (CRUD, ordering, dashboard UI)  | —                      |
+| `social-links` | `SocialLink` + `LinkGroup` tables (CRUD, ordering, dashboard UI) | —        |
 | `profile`      | Owner display name/bio/avatar                      | —                      |
 | `redirects`    | Subdomain → target URL resolution + Redis cache    | `social-links` (read-only, via its service) |
 | `youtube`      | Latest video/short fetch + Redis cache             | —                      |
+| `twitch`       | Live status via EventSub webhook + Redis cache     | —                      |
 | `i18n`         | next-intl config + message catalogs                | —                      |
 | `theme`        | Theme provider wrapper                             | —                      |

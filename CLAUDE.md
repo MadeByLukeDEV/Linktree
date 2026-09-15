@@ -133,8 +133,9 @@ src/
     (public)/              # public profile page (social.aboutselphy.com)
     (dashboard)/dashboard/  # protected owner dashboard
     api/auth/[...all]/      # BetterAuth route handler
+    api/twitch/eventsub/    # Twitch EventSub webhook receiver
   modules/                 # see src/modules/README.md
-    auth/  social-links/  profile/  redirects/  youtube/  i18n/  theme/
+    auth/  social-links/  profile/  redirects/  youtube/  twitch/  i18n/  theme/
   components/ui/           # shadcn primitives — shared, not a "module"
   lib/                     # cross-cutting: prisma client, redis client, generic utils
 prisma/
