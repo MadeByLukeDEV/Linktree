@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { auth } from "@/modules/auth/server";
 import { prisma } from "@/lib/prisma";
+import { ADMIN_ROLE } from "@/modules/auth/roles";
 
 async function main() {
   const email = process.env.OWNER_EMAIL ?? process.argv[2];
@@ -21,10 +22,10 @@ async function main() {
 
   await prisma.user.update({
     where: { id: result.user.id },
-    data: { role: "admin" },
+    data: { role: ADMIN_ROLE },
   });
 
-  console.log(`Created owner account: ${email} (role: admin)`);
+  console.log(`Created owner account: ${email} (role: ${ADMIN_ROLE})`);
 }
 
 main()

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/modules/auth/server";
+import { isAdmin } from "@/modules/auth/roles";
 import { PasskeyManager } from "@/modules/auth/components/passkey-manager";
 import { ProfileForm } from "@/modules/profile/components/profile-form";
 import * as profileService from "@/modules/profile/service";
@@ -23,7 +24,11 @@ export default async function DashboardPage() {
   ]);
 
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
-  const name = profile?.displayName || session?.user.email || "";
+  // The logged-in account's own name -- NOT profile.displayName, which is
+  // the site's public-facing name and would show the owner's name to a
+  // signed-in moderator instead of their own.
+  const name = session?.user.name || session?.user.email || "";
+  const canEditProfile = isAdmin(session?.user.role);
 
   return (
     <div className="flex min-h-svh flex-col bg-muted/30">
@@ -33,7 +38,9 @@ export default async function DashboardPage() {
         <Tabs defaultValue="links">
           <TabsList className="mb-[clamp(1rem,3vw,1.5rem)]">
             <TabsTrigger value="links">{t("tabs.links")}</TabsTrigger>
-            <TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
+            {canEditProfile ? (
+              <TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
+            ) : null}
             <TabsTrigger value="security">{t("tabs.security")}</TabsTrigger>
           </TabsList>
 
@@ -42,9 +49,11 @@ export default async function DashboardPage() {
               <LinkList initialLinks={links} rootDomain={rootDomain} />
             </TabsContent>
 
-            <TabsContent value="profile">
-              <ProfileForm profile={profile} />
-            </TabsContent>
+            {canEditProfile ? (
+              <TabsContent value="profile">
+                <ProfileForm profile={profile} />
+              </TabsContent>
+            ) : null}
 
             <TabsContent value="security">
               <PasskeyManager />

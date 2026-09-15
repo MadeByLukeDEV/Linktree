@@ -6,11 +6,13 @@ import { auth } from "@/modules/auth/server";
 import { socialLinkSchema } from "@/modules/social-links/schema";
 import * as service from "@/modules/social-links/service";
 import type { SocialLink } from "@/generated/prisma/client";
+import { canAccessDashboard } from "@/modules/auth/roles";
 
-async function requireSession() {
+// Both roles (owner + moderator) can manage links.
+async function requireDashboardAccess() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
-    throw new Error("Not authenticated");
+  if (!session || !canAccessDashboard(session.user.role)) {
+    throw new Error("Not authorized");
   }
 }
 
@@ -25,7 +27,7 @@ export type SocialLinkActionResult =
 export async function createSocialLinkAction(
   input: unknown
 ): Promise<SocialLinkActionResult> {
-  await requireSession();
+  await requireDashboardAccess();
   const parsed = socialLinkSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -46,7 +48,7 @@ export async function updateSocialLinkAction(
   id: string,
   input: unknown
 ): Promise<SocialLinkActionResult> {
-  await requireSession();
+  await requireDashboardAccess();
   const parsed = socialLinkSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -64,7 +66,7 @@ export async function updateSocialLinkAction(
 }
 
 export async function deleteSocialLinkAction(id: string): Promise<ActionResult> {
-  await requireSession();
+  await requireDashboardAccess();
 
   try {
     await service.deleteLink(id);
@@ -79,7 +81,7 @@ export async function deleteSocialLinkAction(id: string): Promise<ActionResult> 
 export async function reorderSocialLinksAction(
   orderedIds: string[]
 ): Promise<ActionResult> {
-  await requireSession();
+  await requireDashboardAccess();
 
   try {
     await service.reorderLinks(orderedIds);

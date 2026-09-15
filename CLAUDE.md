@@ -286,28 +286,67 @@ assuming a code bug.
 
 ## Auth
 
-Single owner account, no public sign-up route. `src/modules/auth/server.ts`
-wires up BetterAuth with the Prisma adapter, the **admin** plugin
-(`role: "admin"` is set by hand on the owner row — `defaultRole` is
-`"user"`), and the **`@better-auth/passkey`** plugin so the owner can sign in
-with a hardware security key or a passkey manager like Bitwarden instead of
-a password (WebAuthn is authenticator-agnostic — both work the same way from
-the app's side). `nextCookies()` must stay last in the `plugins` array.
+No public sign-up route — accounts are provisioned by hand via scripts.
+`src/modules/auth/server.ts` wires up BetterAuth with the Prisma adapter,
+the **admin** plugin (`defaultRole` is `"user"`, but nothing ever creates a
+`"user"` row — see roles below), and the **`@better-auth/passkey`** plugin
+so any account can sign in with a hardware security key or a passkey
+manager like Bitwarden instead of a password (WebAuthn is
+authenticator-agnostic — both work the same way from the app's side).
+`nextCookies()` must stay last in the `plugins` array.
+
+### Roles
+
+`src/modules/auth/roles.ts` defines the two roles actually used, with
+helpers (`isAdmin`, `canAccessDashboard`) consumed by every authorization
+check below instead of comparing role strings inline:
+
+- **`admin`** (the owner) — full dashboard access, including the Profile
+  tab (public display name/bio/avatar).
+- **`moderator`** — can manage Links (the `SocialLink` table is a single
+  shared list for the whole site, not per-user — a moderator edits the
+  *same* links the owner and every other moderator see, there's no
+  per-account link ownership) and their own passkeys (inherently scoped
+  per-session by BetterAuth already). Cannot see or edit Profile.
+
+Enforced in three places, all going through `roles.ts` rather than
+duplicating the role check: `src/proxy.ts` (redirects to `/sign-in` if
+`!canAccessDashboard`), `requireDashboardAccess()` in
+`social-links/actions.ts` (both roles), and `requireAdmin()` in
+`profile/actions.ts` (admin only). The dashboard page also hides the
+Profile *tab* client-side for moderators (`isAdmin(session.user.role)`)
+as a UX nicety — the server-side `requireAdmin()` check is what actually
+matters for security, the hidden tab just avoids showing a form that
+would reject the submit.
 
 - Create/update the owner account: `pnpm create-owner <email> <password>
   [name]` (or `OWNER_EMAIL`/`OWNER_PASSWORD`/`OWNER_NAME` env vars) —
   `scripts/create-owner.ts`, calls `auth.api.signUpEmail` then promotes the
   user to `role: "admin"` via Prisma directly.
+- Create a moderator account: `pnpm create-moderator <email> <password>
+  [name]` (or `MODERATOR_EMAIL`/`MODERATOR_PASSWORD`/`MODERATOR_NAME` env
+  vars) — `scripts/create-moderator.ts`, mirrors `create-owner.ts` but
+  promotes to `role: "moderator"` instead. There's no in-dashboard
+  "invite a mod" UI; new mod accounts are always provisioned this way.
 - `src/proxy.ts` protects `/dashboard/**` by calling
   `auth.api.getSession({ headers })` directly (safe because Next 16's
   `proxy` always runs in the Node.js runtime) and redirecting to `/sign-in`
-  when there's no session.
+  when there's no session or the session's role fails
+  `canAccessDashboard`.
+- The dashboard header shows `session.user.name` (the signed-in account's
+  own name) — **not** `profile.displayName` (the site's public-facing
+  name shown on the linktree page itself). These were conflated in an
+  earlier version, which would have shown the owner's public display name
+  to a signed-in moderator instead of the moderator's own name; caught
+  while testing this feature, fixed in `src/app/dashboard/page.tsx`.
 - Passkey registration/authentication is a real WebAuthn ceremony and can't
   be driven headlessly — verified everything else (redirect-when-signed-out,
-  email/password sign-in, dashboard render, sign-out) with a Playwright
-  script against the dev server; the "Add a passkey" / "Sign in with a
-  passkey" buttons need a manual check in an actual browser with a key or
-  Bitwarden set up.
+  email/password sign-in, dashboard render, sign-out, role-based tab
+  visibility) with Playwright scripts against the dev server; the "Add a
+  passkey" / "Sign in with a passkey" buttons need a manual check in an
+  actual browser with a key or Bitwarden set up. Passkeys are always
+  scoped to the signed-in account by BetterAuth, so a moderator managing
+  their own passkeys in the Security tab can't see or touch the owner's.
 - Passkeys can be named on registration (`authClient.passkey.addPasskey({
   name })`) and renamed/deleted afterward (`authClient.passkey.updatePasskey
   ({ id, name })` / `.deletePasskey({ id })`, in `PasskeyManager`). Neither
@@ -316,6 +355,10 @@ the app's side). `nextCookies()` must stay last in the `plugins` array.
   declared (confirmed by `tsc --noEmit` passing, since static grep alone
   couldn't confirm it); the plugin's own source comments document the exact
   client method names this relies on.
+- Local dev and production share the same database — any test account or
+  test link created while verifying auth/role changes is immediately live
+  on the real site and must be deleted again after testing, not left
+  behind.
 
 ## Subdomain forwards
 
@@ -516,3 +559,10 @@ page imports it — regardless of whether that page ever actually calls it.
       available in this dev sandbox, so the `docker build` itself has not
       actually been run. Do a real build before the first production
       deploy.
+- [x] Moderator accounts — see the "Roles" subsection under Auth above.
+      `roles.ts`, `create-moderator.ts`, dashboard Profile-tab gating, and
+      the `session.user.name` vs `profile.displayName` bug fix. Verified
+      live with a temporary moderator account (created, exercised, then
+      deleted from the shared prod/dev database) via Playwright: dashboard
+      redirect/tab visibility per role, link CRUD as a moderator, and that
+      the owner's own dashboard is unaffected.

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/modules/auth/server";
 import { resolveSubdomain } from "@/modules/redirects/service";
 import { RESERVED_SUBDOMAINS } from "@/lib/reserved-subdomains";
+import { canAccessDashboard } from "@/modules/auth/roles";
 
 const RESERVED_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
@@ -46,7 +47,7 @@ export async function proxy(request: NextRequest) {
 
   if (request.nextUrl.pathname.startsWith("/dashboard")) {
     const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) {
+    if (!session || !canAccessDashboard(session.user.role)) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
   }
