@@ -280,6 +280,40 @@ Requires wildcard DNS (`*.aboutselphy.com`) and matching Dokploy domain
 config in production — document the exact steps here once Dokploy is set
 up (Phase 9).
 
+## i18n
+
+`next-intl`, deliberately **without locale-prefixed routing** (no
+`/en`/`/de` URL segments) — this app is flat/single-tenant, so path
+prefixes would be pure overhead. `next.config.ts` points the plugin at
+`./src/modules/i18n/request.ts` (next-intl's default is
+`src/i18n/request.ts`; moved to match this project's module layout).
+
+Locale resolution (`src/modules/i18n/request.ts` + `config.ts`): a
+`locale` cookie wins if present (manual override); otherwise falls back to
+parsing `Accept-Language` (device default) — the server-side equivalent of
+how `next-themes` reads `prefers-color-scheme` on the client, just
+necessarily server-side here since translated text has to be in the
+initial HTML rather than swapped in by CSS. `LocaleSwitcher`
+(`src/modules/i18n/components/`) calls a server action to set the cookie,
+then `router.refresh()`s.
+
+Messages live in `src/modules/i18n/messages/{en,de}.json`, one JSON tree
+per locale, namespaced by area (`SignIn`, `Dashboard.Links`,
+`Dashboard.Profile`, `Dashboard.Security`, `PublicProfile`, `Youtube`,
+`LocaleSwitcher`) — `useTranslations("Namespace")` in Client Components,
+`getTranslations("Namespace")` (async) in Server Components. Adding a UI
+string means adding the same key to both JSON files; nothing enforces
+that they stay in sync, so check both when touching translated text.
+
+Verified live: `Accept-Language: de-DE` renders German, an unsupported
+language (e.g. `fr-FR`) falls back to English, the switcher's manual
+override works, and the cookie override persists across a reload even
+when the simulated device locale is still German. Side effect worth
+knowing: `/` and `/_not-found` became dynamically rendered (were
+statically prerendered before this phase) since locale resolution reads
+cookies/headers on every request — expected and necessary, not a
+regression.
+
 ## Feature status
 
 - [x] Phase 0 — repo, Next.js scaffold, shadcn/ui, Framer Motion, module
@@ -306,10 +340,10 @@ up (Phase 9).
       (Redis-cached, 1h TTL; "Short" classified by duration <= 180s since
       the API exposes no explicit flag), rendered in a `<Suspense>` boundary
       on the public page so a slow/failing YouTube API never blocks the
-      rest of it. Not yet enabled — `YOUTUBE_API_KEY`/`YOUTUBE_CHANNEL_ID`
-      are still empty in `.env`; verified graceful degradation (page still
-      renders, nothing shown) both when unset and when the API call itself
-      fails
-- [ ] Phase 7 — i18n (German/English, device default)
+      rest of it. Verified graceful degradation both when unset and when the
+      API call fails, and — once `YOUTUBE_API_KEY`/`YOUTUBE_CHANNEL_ID` were
+      set to real values — verified live with real channel data
+- [x] Phase 7 — i18n (German/English, device default) — see the dedicated
+      section below
 - [ ] Phase 8 — dark/light theme (device default)
 - [ ] Phase 9 — Dockerize for Dokploy

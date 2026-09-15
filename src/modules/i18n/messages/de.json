@@ -1,0 +1,70 @@
+{
+  "PublicProfile": {
+    "noLinks": "Noch keine Links — schau bald wieder vorbei."
+  },
+  "Youtube": {
+    "latestVideo": "Neuestes Video",
+    "latestShort": "Neuester Short"
+  },
+  "SignIn": {
+    "title": "Anmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "signIn": "Anmelden",
+    "signingIn": "Anmeldung läuft…",
+    "or": "oder",
+    "signInWithPasskey": "Mit Passkey anmelden",
+    "waitingForPasskey": "Warte auf Passkey…",
+    "signInFailed": "Anmeldung fehlgeschlagen",
+    "passkeySignInFailed": "Anmeldung mit Passkey fehlgeschlagen"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "signedInAs": "Angemeldet als {email}",
+    "signOut": "Abmelden",
+    "tabs": {
+      "links": "Links",
+      "profile": "Profil",
+      "security": "Sicherheit"
+    },
+    "Links": {
+      "heading": "Links",
+      "addLink": "Link hinzufügen",
+      "editLink": "Link bearbeiten",
+      "noLinks": "Noch keine Links. Füge oben deinen ersten hinzu.",
+      "platform": "Plattform",
+      "label": "Beschriftung",
+      "url": "URL",
+      "iconUrl": "Icon-URL (optional)",
+      "subdomain": "Subdomain-Weiterleitung (optional)",
+      "subdomainPreview": "{subdomain}.{rootDomain} leitet zu dieser URL weiter",
+      "showOnProfile": "Auf Profil anzeigen",
+      "saving": "Wird gespeichert…",
+      "saveChanges": "Änderungen speichern",
+      "linkAdded": "Link hinzugefügt",
+      "linkUpdated": "Link aktualisiert",
+      "linkDeleted": "Link gelöscht",
+      "hidden": "ausgeblendet"
+    },
+    "Profile": {
+      "displayName": "Anzeigename",
+      "bio": "Bio",
+      "avatarUrl": "Avatar-URL",
+      "saveProfile": "Profil speichern",
+      "saving": "Wird gespeichert…",
+      "profileSaved": "Profil gespeichert"
+    },
+    "Security": {
+      "heading": "Passkeys",
+      "noPasskeys": "Noch keine Passkeys registriert. Füge einen hinzu, um dich mit einem Hardware-Sicherheitsschlüssel oder einem Passkey-Manager wie Bitwarden statt mit deinem Passwort anzumelden.",
+      "unnamedPasskey": "Unbenannter Passkey",
+      "addPasskey": "Passkey hinzufügen",
+      "waitingForAuthenticator": "Warte auf Authentifizierungsgerät…",
+      "couldNotAddPasskey": "Passkey konnte nicht hinzugefügt werden"
+    }
+  },
+  "LocaleSwitcher": {
+    "english": "Englisch",
+    "german": "Deutsch"
+  }
+}

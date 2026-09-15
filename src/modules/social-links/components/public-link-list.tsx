@@ -1,15 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Link2 } from "lucide-react";
 import type { SocialLink } from "@/generated/prisma/client";
 
 export function PublicLinkList({ links }: { links: SocialLink[] }) {
+  const t = useTranslations("PublicProfile");
+
   if (links.length === 0) {
     return (
-      <p className="text-center text-muted-foreground">
-        No links yet — check back soon.
-      </p>
+      <p className="text-center text-muted-foreground">{t("noLinks")}</p>
     );
   }
 

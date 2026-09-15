@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   DndContext,
   closestCenter,
@@ -35,6 +36,7 @@ function SortableLinkRow({
   onDelete: (id: string) => void;
   onUpdated: (link: SocialLink) => void;
 }) {
+  const t = useTranslations("Dashboard.Links");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: link.id });
 
@@ -66,7 +68,7 @@ function SortableLinkRow({
         <span className="truncate text-xs text-muted-foreground">
           {link.url}
           {link.subdomain ? ` · ${link.subdomain}.${rootDomain}` : ""}
-          {!link.showOnProfile ? " · hidden" : ""}
+          {!link.showOnProfile ? ` · ${t("hidden")}` : ""}
         </span>
       </div>
 
@@ -100,6 +102,7 @@ export function LinkList({
   initialLinks: SocialLink[];
   rootDomain: string;
 }) {
+  const t = useTranslations("Dashboard.Links");
   const [links, setLinks] = useState(initialLinks);
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -128,7 +131,7 @@ export function LinkList({
       setLinks(previous);
       return;
     }
-    toast.success("Link deleted");
+    toast.success(t("linkDeleted"));
   }
 
   function handleCreated(link: SocialLink) {
@@ -144,18 +147,16 @@ export function LinkList({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">Links</h2>
+        <h2 className="text-lg font-medium">{t("heading")}</h2>
         <LinkFormDialog
           rootDomain={rootDomain}
           onSuccess={handleCreated}
-          trigger={<Button type="button">Add link</Button>}
+          trigger={<Button type="button">{t("addLink")}</Button>}
         />
       </div>
 
       {links.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No links yet. Add your first one above.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("noLinks")}</p>
       ) : (
         <DndContext
           sensors={sensors}

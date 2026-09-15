@@ -1,0 +1,70 @@
+{
+  "PublicProfile": {
+    "noLinks": "No links yet — check back soon."
+  },
+  "Youtube": {
+    "latestVideo": "Latest video",
+    "latestShort": "Latest short"
+  },
+  "SignIn": {
+    "title": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "or": "or",
+    "signInWithPasskey": "Sign in with a passkey",
+    "waitingForPasskey": "Waiting for passkey…",
+    "signInFailed": "Sign in failed",
+    "passkeySignInFailed": "Passkey sign in failed"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "signedInAs": "Signed in as {email}",
+    "signOut": "Sign out",
+    "tabs": {
+      "links": "Links",
+      "profile": "Profile",
+      "security": "Security"
+    },
+    "Links": {
+      "heading": "Links",
+      "addLink": "Add link",
+      "editLink": "Edit link",
+      "noLinks": "No links yet. Add your first one above.",
+      "platform": "Platform",
+      "label": "Label",
+      "url": "URL",
+      "iconUrl": "Icon URL (optional)",
+      "subdomain": "Subdomain forward (optional)",
+      "subdomainPreview": "{subdomain}.{rootDomain} will redirect to this URL",
+      "showOnProfile": "Show on profile",
+      "saving": "Saving…",
+      "saveChanges": "Save changes",
+      "linkAdded": "Link added",
+      "linkUpdated": "Link updated",
+      "linkDeleted": "Link deleted",
+      "hidden": "hidden"
+    },
+    "Profile": {
+      "displayName": "Display name",
+      "bio": "Bio",
+      "avatarUrl": "Avatar URL",
+      "saveProfile": "Save profile",
+      "saving": "Saving…",
+      "profileSaved": "Profile saved"
+    },
+    "Security": {
+      "heading": "Passkeys",
+      "noPasskeys": "No passkeys registered yet. Add one to sign in with a hardware security key or a passkey manager like Bitwarden instead of your password.",
+      "unnamedPasskey": "Unnamed passkey",
+      "addPasskey": "Add a passkey",
+      "waitingForAuthenticator": "Waiting for authenticator…",
+      "couldNotAddPasskey": "Could not add passkey"
+    }
+  },
+  "LocaleSwitcher": {
+    "english": "English",
+    "german": "German"
+  }
+}

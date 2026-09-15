@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { getLatest, type YoutubeVideo } from "@/modules/youtube/service";
 
 function VideoCard({
@@ -35,7 +36,10 @@ function VideoCard({
 }
 
 export async function YoutubeSection() {
-  const { video, short } = await getLatest();
+  const [{ video, short }, t] = await Promise.all([
+    getLatest(),
+    getTranslations("Youtube"),
+  ]);
 
   if (!video && !short) {
     return null;
@@ -46,14 +50,14 @@ export async function YoutubeSection() {
       {video ? (
         <VideoCard
           video={video}
-          label="Latest video"
+          label={t("latestVideo")}
           href={`https://www.youtube.com/watch?v=${video.id}`}
         />
       ) : null}
       {short ? (
         <VideoCard
           video={short}
-          label="Latest short"
+          label={t("latestShort")}
           href={`https://www.youtube.com/shorts/${short.id}`}
         />
       ) : null}

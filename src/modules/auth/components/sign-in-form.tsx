@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
@@ -20,6 +21,7 @@ import {
 
 export function SignInForm() {
   const router = useRouter();
+  const t = useTranslations("SignIn");
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -37,7 +39,7 @@ export function SignInForm() {
       password: data.password,
     });
     if (error) {
-      setFormError(error.message ?? "Sign in failed");
+      setFormError(error.message ?? t("signInFailed"));
       return;
     }
     router.push("/dashboard");
@@ -54,7 +56,7 @@ export function SignInForm() {
     >
       <FieldGroup>
         <Field data-invalid={!!errors.email || undefined}>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <FieldLabel htmlFor="email">{t("email")}</FieldLabel>
           <Input
             id="email"
             type="email"
@@ -66,7 +68,7 @@ export function SignInForm() {
         </Field>
 
         <Field data-invalid={!!errors.password || undefined}>
-          <FieldLabel htmlFor="password">Password</FieldLabel>
+          <FieldLabel htmlFor="password">{t("password")}</FieldLabel>
           <Input
             id="password"
             type="password"
@@ -84,10 +86,10 @@ export function SignInForm() {
         ) : null}
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Signing in…" : "Sign in"}
+          {isSubmitting ? t("signingIn") : t("signIn")}
         </Button>
 
-        <FieldSeparator>or</FieldSeparator>
+        <FieldSeparator>{t("or")}</FieldSeparator>
 
         <PasskeySignInButton />
       </FieldGroup>

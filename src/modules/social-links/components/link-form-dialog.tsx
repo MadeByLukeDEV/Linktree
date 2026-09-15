@@ -3,6 +3,7 @@
 import { useState, type ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   socialLinkSchema,
@@ -43,6 +44,7 @@ export function LinkFormDialog({
   rootDomain: string;
   onSuccess: (link: SocialLink) => void;
 }) {
+  const t = useTranslations("Dashboard.Links");
   const [open, setOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = !!link;
@@ -79,7 +81,7 @@ export function LinkFormDialog({
       setFormError(result.error);
       return;
     }
-    toast.success(isEdit ? "Link updated" : "Link added");
+    toast.success(isEdit ? t("linkUpdated") : t("linkAdded"));
     onSuccess(result.data);
     setOpen(false);
     if (!isEdit) {
@@ -92,13 +94,13 @@ export function LinkFormDialog({
       <DialogTrigger render={trigger} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit link" : "Add a link"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("editLink") : t("addLink")}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <FieldGroup>
             <Field data-invalid={!!errors.platform || undefined}>
-              <FieldLabel htmlFor="platform">Platform</FieldLabel>
+              <FieldLabel htmlFor="platform">{t("platform")}</FieldLabel>
               <Input
                 id="platform"
                 placeholder="Instagram"
@@ -110,7 +112,7 @@ export function LinkFormDialog({
             </Field>
 
             <Field data-invalid={!!errors.label || undefined}>
-              <FieldLabel htmlFor="label">Label</FieldLabel>
+              <FieldLabel htmlFor="label">{t("label")}</FieldLabel>
               <Input
                 id="label"
                 placeholder="@aboutselphy"
@@ -120,7 +122,7 @@ export function LinkFormDialog({
             </Field>
 
             <Field data-invalid={!!errors.url || undefined}>
-              <FieldLabel htmlFor="url">URL</FieldLabel>
+              <FieldLabel htmlFor="url">{t("url")}</FieldLabel>
               <Input
                 id="url"
                 type="url"
@@ -131,7 +133,7 @@ export function LinkFormDialog({
             </Field>
 
             <Field data-invalid={!!errors.icon || undefined}>
-              <FieldLabel htmlFor="icon">Icon URL (optional)</FieldLabel>
+              <FieldLabel htmlFor="icon">{t("iconUrl")}</FieldLabel>
               <Input id="icon" type="url" {...register("icon")} />
               <FieldError errors={errors.icon ? [errors.icon] : undefined} />
             </Field>
@@ -140,9 +142,7 @@ export function LinkFormDialog({
               orientation="horizontal"
               data-invalid={!!errors.subdomain || undefined}
             >
-              <FieldLabel htmlFor="subdomain">
-                Subdomain forward (optional)
-              </FieldLabel>
+              <FieldLabel htmlFor="subdomain">{t("subdomain")}</FieldLabel>
               <Input
                 id="subdomain"
                 placeholder="instagram"
@@ -151,7 +151,7 @@ export function LinkFormDialog({
             </Field>
             {subdomain ? (
               <FieldDescription>
-                {subdomain}.{rootDomain} will redirect to this URL
+                {t("subdomainPreview", { subdomain, rootDomain })}
               </FieldDescription>
             ) : null}
             <FieldError
@@ -159,7 +159,9 @@ export function LinkFormDialog({
             />
 
             <Field orientation="horizontal">
-              <FieldLabel htmlFor="showOnProfile">Show on profile</FieldLabel>
+              <FieldLabel htmlFor="showOnProfile">
+                {t("showOnProfile")}
+              </FieldLabel>
               <Switch
                 id="showOnProfile"
                 checked={showOnProfile}
@@ -178,7 +180,11 @@ export function LinkFormDialog({
 
           <DialogFooter className="mt-4">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving…" : isEdit ? "Save changes" : "Add link"}
+              {isSubmitting
+                ? t("saving")
+                : isEdit
+                  ? t("saveChanges")
+                  : t("addLink")}
             </Button>
           </DialogFooter>
         </form>

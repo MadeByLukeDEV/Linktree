@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { authClient } from "@/modules/auth/client";
 import { Button } from "@/components/ui/button";
 
 export function PasskeySignInButton() {
   const router = useRouter();
+  const t = useTranslations("SignIn");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -16,7 +18,7 @@ export function PasskeySignInButton() {
     const { error } = await authClient.signIn.passkey();
     setPending(false);
     if (error) {
-      setError(error.message ?? "Passkey sign in failed");
+      setError(error.message ?? t("passkeySignInFailed"));
       return;
     }
     router.push("/dashboard");
@@ -32,7 +34,7 @@ export function PasskeySignInButton() {
         disabled={pending}
         onClick={handleClick}
       >
-        {pending ? "Waiting for passkey…" : "Sign in with a passkey"}
+        {pending ? t("waitingForPasskey") : t("signInWithPasskey")}
       </Button>
       {error ? (
         <p role="alert" className="text-sm text-destructive">

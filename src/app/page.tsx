@@ -6,6 +6,7 @@ import { PublicLinkList } from "@/modules/social-links/components/public-link-li
 import { YoutubeSection } from "@/modules/youtube/components/youtube-section";
 import { YoutubeSkeleton } from "@/modules/youtube/components/youtube-skeleton";
 import { isYoutubeConfigured } from "@/modules/youtube/service";
+import { LocaleSwitcher } from "@/modules/i18n/components/locale-switcher";
 
 export default async function Home() {
   const [profile, links] = await Promise.all([
@@ -23,6 +24,7 @@ export default async function Home() {
           </Suspense>
         ) : null}
         <PublicLinkList links={links} />
+        <LocaleSwitcher />
       </div>
     </main>
   );
