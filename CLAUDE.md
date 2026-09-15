@@ -199,19 +199,29 @@ See [.env.example](.env.example): `DATABASE_URL`, `REDIS_URL`,
 `DATABASE_URL` and `REDIS_URL` directly — no local Docker MariaDB/Redis
 containers for dev.
 
-**Redis reachability from this dev sandbox is unreliable** — raw TCP to the
-`REDIS_URL` host:port has timed out here (`connect ETIMEDOUT`) even though
-the same sandbox reaches `DATABASE_URL` (MariaDB) fine, most likely a
-firewall/allowlist difference on the Redis host, not a code issue. Because
-of this, every Redis call in the app (`src/lib/redirect-cache.ts`) is
-written to fail soft: a failed cache invalidation is logged and swallowed,
-never allowed to fail the write that triggered it, since Redis here is only
-a cache, not a source of truth. `src/lib/redis.ts` also caps
-`maxRetriesPerRequest`/backoff so a dead Redis degrades (slower writes on
-paths that touch the cache) instead of hanging. If Redis-dependent features
-(Phase 5 subdomain redirects, Phase 6 YouTube caching) seem to silently not
-cache anything, check reachability from wherever the app is actually
-running before assuming a code bug.
+**Redis reachability history** — the original `REDIS_URL` host (a public IP)
+was unreachable from this dev sandbox (`connect ETIMEDOUT`) even though the
+same sandbox reached `DATABASE_URL` (MariaDB) on the same box fine. Switching
+`DATABASE_URL`/`REDIS_URL` to the box's Tailscale IP fixed MariaDB
+immediately and fixed Redis after some server-side firewall/config work —
+confirmed working end-to-end (`PING` → `PONG`, and real subdomain-redirect
+cache hits/invalidation verified live). The app's Redis ACL user also lacks
+`INFO` permission (breaks ioredis's default ready check — disabled via
+`enableReadyCheck: false` in `src/lib/redis.ts`) and, in some ad-hoc
+one-off scripts outside the app's normal request path, `GET`/`DEL` on
+`redirect:*` keys threw `NOPERM` even though the exact same keys were
+readable/writable through the app's own long-lived connection — never
+root-caused (possibly an ACL being tuned live on the server side), but
+harmless in practice because every Redis call in the app is written to fail
+soft regardless. Because of that history, every Redis call in the app
+(`src/lib/redirect-cache.ts`, `src/modules/redirects/service.ts`) is
+written to fail soft: a failed cache read/write is logged and swallowed,
+falling back to the database, never allowed to fail the write/redirect that
+triggered it. `src/lib/redis.ts` also caps `maxRetriesPerRequest`/backoff so
+a dead Redis degrades gracefully instead of hanging. If Redis-dependent
+features seem to silently not cache anything, check reachability from
+wherever the app is actually running (and the ACL's permissions) before
+assuming a code bug.
 
 ## Auth
 
@@ -240,13 +250,35 @@ the app's side). `nextCookies()` must stay last in the `plugins` array.
 
 ## Subdomain forwards
 
-`src/proxy.ts` inspects the `Host` header. If the hostname's subdomain isn't
-the root app domain (`social`, `www`, apex, `localhost`), it asks the
-`redirects` module to resolve that subdomain against the dashboard-managed
-`SocialLink.subdomain` field (Redis-cached, MariaDB-backed) and redirects to
-the resolved target URL, or falls through to the main site if unconfigured.
+`src/proxy.ts` runs on every path except static assets (`matcher:
+["/((?!_next/static|_next/image|favicon.ico).*)"]`). It reads the `Host`
+header (stripped of port) and extracts a candidate subdomain label: hosts
+that are `localhost`/`127.0.0.1`, exactly `NEXT_PUBLIC_ROOT_DOMAIN`,
+`www.<root>`, or `social.<root>`, or whose first label is in
+`RESERVED_SUBDOMAINS` (`src/lib/reserved-subdomains.ts` — shared with the
+create/edit form's slug validation in `social-links/schema.ts` so the two
+lists can't drift apart) are treated as the main app, not a forward.
+Anything else calls `modules/redirects`' `resolveSubdomain`, which checks
+Redis (`redirect:<subdomain>`, 5 min TTL) then falls back to
+`social-links`' public `getBySubdomain` service function on a miss
+(read-only cross-module call — never touches `social-links`'
+`repository.ts`), and redirects (307) to the resolved URL, or back to
+`NEXT_PUBLIC_SITE_URL` if the subdomain isn't configured. `social-links`'
+`updateLink`/`deleteLink` invalidate the old subdomain's cache key on
+*any* update to a link that had one (not just when the subdomain value
+itself changes) — a bug caught during testing: changing a link's
+destination URL while keeping the same subdomain left the cache serving
+the stale target until the TTL expired.
+
+Verified locally with `curl -H "Host: <label>.aboutselphy.com"
+http://localhost:3000/` (spoofing the Host header directly, since there's
+no real subdomain DNS in dev) — confirmed configured subdomains redirect,
+unconfigured ones fall back, reserved/main hosts route normally, and cache
+invalidation on edit/delete is immediate.
+
 Requires wildcard DNS (`*.aboutselphy.com`) and matching Dokploy domain
-config — document the exact steps here once Dokploy is set up (Phase 9).
+config in production — document the exact steps here once Dokploy is set
+up (Phase 9).
 
 ## Feature status
 
@@ -267,7 +299,9 @@ config — document the exact steps here once Dokploy is set up (Phase 9).
       `loading.tsx` skeleton. Verified `revalidatePath("/")` actually keeps
       it in sync with dashboard edits (no rebuild needed) via a live
       browser test
-- [ ] Phase 5 — data-driven subdomain redirects (`proxy.ts` + `redirects` module)
+- [x] Phase 5 — data-driven subdomain redirects (`proxy.ts` + `redirects`
+      module), verified live against multiple subdomains with cache
+      invalidation on edit/delete
 - [ ] Phase 6 — YouTube latest video/short integration
 - [ ] Phase 7 — i18n (German/English, device default)
 - [ ] Phase 8 — dark/light theme (device default)

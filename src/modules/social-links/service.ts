@@ -29,6 +29,7 @@ async function assertSubdomainAvailable(subdomain: string, excludeId?: string) {
 
 export const listAll = repository.findAll;
 export const listVisible = repository.findVisible;
+export const getBySubdomain = repository.findBySubdomain;
 
 export async function createLink(input: SocialLinkInput) {
   const data = normalize(input);
@@ -52,7 +53,11 @@ export async function updateLink(id: string, input: SocialLinkInput) {
 
   const updated = await repository.update(id, data);
 
-  if (existing.subdomain && existing.subdomain !== data.subdomain) {
+  // Invalidate the old subdomain's cache entry whenever it existed, not just
+  // when the subdomain value itself changed -- other fields (e.g. url) can
+  // change while the subdomain stays the same, and a stale cached target
+  // must not keep serving until the TTL expires.
+  if (existing.subdomain) {
     await invalidateRedirectCache(existing.subdomain);
   }
   if (data.subdomain && data.subdomain !== existing.subdomain) {

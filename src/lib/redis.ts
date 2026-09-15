@@ -12,6 +12,10 @@ function createClient() {
   const client = new Redis(url, {
     maxRetriesPerRequest: 2,
     retryStrategy: (times) => Math.min(times * 500, 10_000),
+    // The app's Redis ACL user has no permission for INFO, which ioredis's
+    // ready check calls by default -- disable it rather than let every
+    // connection log a NOPERM warning.
+    enableReadyCheck: false,
   });
   client.on("error", (error) => {
     console.error("Redis connection error:", error.message);

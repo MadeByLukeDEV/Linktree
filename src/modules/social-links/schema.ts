@@ -1,16 +1,5 @@
 import { z } from "zod";
-
-const RESERVED_SUBDOMAINS = new Set([
-  "www",
-  "social",
-  "api",
-  "app",
-  "admin",
-  "dashboard",
-  "mail",
-  "ftp",
-  "localhost",
-]);
+import { RESERVED_SUBDOMAINS } from "@/lib/reserved-subdomains";
 
 export const subdomainSchema = z
   .string()
