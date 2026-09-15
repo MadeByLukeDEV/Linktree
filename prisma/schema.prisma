@@ -16,6 +16,14 @@ datasource db {
 // modules/auth — BetterAuth-required tables. Regenerate with:
 //   pnpm dlx auth@1.7.5 generate --config src/modules/auth/server.ts -y
 // Do not hand-edit these four models; change the BetterAuth config instead.
+//
+// EXCEPTION: Verification.value has a hand-added @db.Text. The generator
+// doesn't know this table also stores the passkey plugin's WebAuthn
+// registration/authentication ceremony JSON (challenge + user data), which
+// exceeds MySQL's default VARCHAR(191) and fails with a Prisma P2000
+// "value too long" error at runtime, not at schema-generation time -- the
+// generator has no way to see that from the plugin config alone. If
+// regenerating this block ever drops the @db.Text, re-add it.
 // ---------------------------------------------------------------------------
 
 model User {
@@ -79,7 +87,7 @@ model Account {
 model Verification {
   id         String   @id
   identifier String
-  value      String
+  value      String   @db.Text
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
