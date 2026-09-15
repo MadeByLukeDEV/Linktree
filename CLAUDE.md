@@ -12,7 +12,9 @@ real profile URL — this is data-driven, not hardcoded to any one platform.
 
 - Next.js 16 (App Router, Turbopack), TypeScript, Tailwind CSS v4
 - shadcn/ui (`base-nova` style, Base UI primitives, not Radix) + Framer Motion
-- Prisma ORM on PostgreSQL
+- Prisma ORM on **MariaDB** (via Prisma's `mysql` provider — Prisma has no
+  dedicated `mariadb` provider; connection strings use the `mysql://` scheme,
+  not `mariadb://`, even though the DB itself is MariaDB)
 - Redis (`ioredis`) — shared cache for subdomain-redirect lookups and YouTube
   API responses (works correctly across multiple Dokploy container instances)
 - BetterAuth with the admin plugin (single owner account, no public signup)
@@ -41,6 +43,61 @@ matter here:
   avatar uploads and YouTube thumbnails).
 - `output: 'standalone'` is unchanged — still correct for the Dokploy Docker
   build.
+
+## Prisma 7 — also do not use stale knowledge
+
+npm's `latest` dist-tag for the `prisma` CLI package currently points at a
+**8.0.0-rc.15 prerelease** (while `@prisma/client`'s `latest` tag is still
+7.10.0 stable) — `pnpm add prisma` / `pnpm dlx prisma ...` will silently pull
+the RC and its large unrelated dependency tree (Cloudflare `workerd`,
+`alchemy`, `effect`, `pglite`). This project pins both packages to the exact
+stable `7.10.0` — always use `pnpm exec prisma ...` (uses the pinned local
+version), never `pnpm dlx prisma ...` (re-resolves to whatever `latest`
+currently means). Re-check `npm view prisma dist-tags` before ever bumping
+this dependency.
+
+Other Prisma 7 changes vs. older knowledge:
+
+- Config lives in **`prisma7.config.ts`** (not `schema.prisma`'s old
+  `env()` datasource URL, and not a `prisma.config.ts` — this exact
+  filename is what this installed version resolves; `prisma validate`
+  confirms it loaded correctly). It reads `DATABASE_URL` via `dotenv/config`.
+- The client generator (`provider = "prisma-client"`) outputs to
+  `src/generated/prisma` (gitignored, regenerate with `pnpm exec prisma
+  generate`) instead of `node_modules/@prisma/client`.
+- Client construction uses a **driver adapter**, not an implicit
+  `datasourceUrl`: see `src/lib/prisma.ts` (`@prisma/adapter-mariadb` +
+  `PrismaMariaDb`, constructed directly from the `DATABASE_URL` string).
+- `prisma migrate diff --to-schema-datamodel` was renamed to
+  `--to-schema`.
+- The DB is MariaDB, but `datasource db { provider = "mysql" }` in
+  `schema.prisma` is correct — Prisma has no separate `mariadb` provider.
+  `DATABASE_URL` must use the `mysql://` scheme (not `mariadb://`, which
+  Prisma's own URL parser rejects with P1013 even though the driver adapter
+  itself accepts either). URL-encode special characters in the password
+  (e.g. `+` → `%2B`, `=` → `%3D`) or Prisma misparses the connection string.
+- MySQL/MariaDB's default `String` maps to `VARCHAR(191)`; fields that need
+  more room (`Profile.bio`, `SocialLink.url`/`icon`) have explicit
+  `@db.Text`/`@db.VarChar(2048)` annotations — add these deliberately on any
+  new long-text field instead of leaving the 191-char default.
+- **Migrations on this DB**: the provided MariaDB user has no `CREATEDB`
+  grant, so `prisma migrate dev` fails with `P3014` (can't create the shadow
+  database). Workflow used instead for every schema change:
+  ```
+  pnpm exec prisma migrate diff --from-schema prisma/schema.prisma \
+    --to-schema prisma/schema.prisma --script   # (or --from-empty for the very first migration)
+  ```
+  then hand-create a `prisma/migrations/<timestamp>_<name>/migration.sql`
+  with the diff output and apply with `pnpm exec prisma migrate deploy`
+  (which doesn't need shadow-DB permissions). In practice: diff the *old*
+  schema state (via `--from-migrations prisma/migrations`) against the new
+  `schema.prisma` to get an incremental script, not a from-empty one, once
+  the first migration already exists.
+- BetterAuth's schema-generator CLI is the **`auth`** npm package (e.g.
+  `pnpm dlx auth@1.7.5 generate --config src/modules/auth/server.ts -y`), not
+  the deprecated `@better-auth/cli`. Regenerate the four auth tables this way
+  after changing `src/modules/auth/server.ts`, then reapply the diff workflow
+  above for the resulting schema change.
 
 ## Modular monolith architecture
 
@@ -105,8 +162,9 @@ pnpm dev            # start dev server (Turbopack)
 pnpm build          # production build
 pnpm start          # run the standalone production build
 pnpm lint           # ESLint (next lint no longer exists in Next 16)
-pnpm dlx prisma migrate dev      # apply migrations locally
-pnpm dlx prisma studio           # inspect the DB
+pnpm exec prisma migrate deploy   # apply migrations (see the shadow-DB note above re: migrate dev)
+pnpm exec prisma generate         # regenerate the client after a schema change
+pnpm exec prisma studio           # inspect the DB
 ```
 
 ## Environment variables
@@ -131,8 +189,12 @@ config — document the exact steps here once Dokploy is set up (Phase 9).
 
 - [x] Phase 0 — repo, Next.js scaffold, shadcn/ui, Framer Motion, module
       skeleton, Redis client, CLAUDE.md
-- [ ] Phase 1 — Prisma schema (auth tables, `Profile`, `SocialLink`)
+- [x] Phase 1 — Prisma schema (auth tables, `Profile`, `SocialLink`),
+      migrated against the real DB
 - [ ] Phase 2 — BetterAuth + admin plugin, dashboard route protection
+      (`src/modules/auth/server.ts` already has a minimal config used to
+      generate the schema; still needs the route handler, sign-in page, and
+      dashboard route protection)
 - [ ] Phase 3 — `social-links` + `profile` modules, dashboard CRUD
 - [ ] Phase 4 — public profile page
 - [ ] Phase 5 — data-driven subdomain redirects (`proxy.ts` + `redirects` module)

@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ---------------------------------------------------------------------------
+// modules/auth — BetterAuth-required tables. Regenerate with:
+//   pnpm dlx auth@1.7.5 generate --config src/modules/auth/server.ts -y
+// Do not hand-edit these four models; change the BetterAuth config instead.
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          String?
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  sessions      Session[]
+  accounts      Account[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// modules/profile — owner display name/bio/avatar. Single-owner app: no
+// public signup, so this is effectively a singleton row, not user-scoped.
+// ---------------------------------------------------------------------------
+
+model Profile {
+  id          String   @id @default(cuid())
+  displayName String
+  bio         String?  @db.Text
+  avatarUrl   String?  @db.VarChar(2048)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("profile")
+}
+
+// ---------------------------------------------------------------------------
+// modules/social-links — core module. A single entry can be shown on the
+// public profile (showOnProfile), exposed as a subdomain forward
+// (subdomain), or both. modules/redirects reads `subdomain` read-only via
+// this module's public service, never directly.
+// ---------------------------------------------------------------------------
+
+model SocialLink {
+  id            String   @id @default(cuid())
+  platform      String
+  label         String
+  url           String   @db.VarChar(2048)
+  icon          String?  @db.VarChar(2048)
+  order         Int      @default(0)
+  showOnProfile Boolean  @default(true)
+  subdomain     String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("social_link")
+}

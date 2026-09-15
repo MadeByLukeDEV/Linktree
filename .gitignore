@@ -43,7 +43,10 @@ next-env.d.ts
 
 # claude code local settings
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # IDE
 .vscode/*
 !.vscode/extensions.json
+
+/src/generated/prisma
