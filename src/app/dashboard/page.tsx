@@ -9,6 +9,7 @@ import { LinkList } from "@/modules/social-links/components/link-list";
 import * as socialLinksService from "@/modules/social-links/service";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LocaleSwitcher } from "@/modules/i18n/components/locale-switcher";
+import { ThemeToggle } from "@/modules/theme/components/theme-toggle";
 
 export default async function DashboardPage() {
   const [session, profile, links, t] = await Promise.all([
@@ -31,6 +32,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
+          <ThemeToggle />
           <SignOutButton />
         </div>
       </div>

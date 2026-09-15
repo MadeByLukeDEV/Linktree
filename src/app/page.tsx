@@ -7,6 +7,7 @@ import { YoutubeSection } from "@/modules/youtube/components/youtube-section";
 import { YoutubeSkeleton } from "@/modules/youtube/components/youtube-skeleton";
 import { isYoutubeConfigured } from "@/modules/youtube/service";
 import { LocaleSwitcher } from "@/modules/i18n/components/locale-switcher";
+import { ThemeToggle } from "@/modules/theme/components/theme-toggle";
 
 export default async function Home() {
   const [profile, links] = await Promise.all([
@@ -24,7 +25,10 @@ export default async function Home() {
           </Suspense>
         ) : null}
         <PublicLinkList links={links} />
-        <LocaleSwitcher />
+        <div className="flex items-center gap-2">
+          <LocaleSwitcher />
+          <ThemeToggle />
+        </div>
       </div>
     </main>
   );

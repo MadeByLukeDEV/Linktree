@@ -345,5 +345,17 @@ regression.
       set to real values — verified live with real channel data
 - [x] Phase 7 — i18n (German/English, device default) — see the dedicated
       section below
-- [ ] Phase 8 — dark/light theme (device default)
+- [x] Phase 8 — dark/light theme (device default): `next-themes`,
+      `attribute="class"` (matches Tailwind v4's
+      `@custom-variant dark (&:is(.dark *))` + the `.dark {}` block shadcn
+      already generated in `globals.css`), `defaultTheme="system"`. A
+      light/dark/system `ThemeToggle` (`src/modules/theme/components/`) on
+      the public page and dashboard for manual override; persisted via
+      next-themes' own `localStorage` handling. The hydration-safe "has this
+      mounted on the client yet" check uses `useSyncExternalStore` rather
+      than the classic `useEffect(() => setMounted(true), [])` idiom — the
+      React Compiler's linter flags that pattern as a same-render cascading
+      `setState` in an effect. Verified live: device `prefers-color-scheme:
+      dark`/`light` both apply with no manual action, a manual toggle
+      overrides it, and the override survives a reload.
 - [ ] Phase 9 — Dockerize for Dokploy
