@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Link2 } from "lucide-react";
 import type { SocialLink } from "@/generated/prisma/client";
+import { BrandIcon } from "@/modules/social-links/components/brand-icon";
 
 export function PublicLinkList({ links }: { links: SocialLink[] }) {
   const t = useTranslations("PublicProfile");
@@ -29,16 +29,12 @@ export function PublicLinkList({ links }: { links: SocialLink[] }) {
             rel="noopener noreferrer"
             className="flex items-center gap-3 rounded-xl border border-border bg-card p-[clamp(0.75rem,3vw,1rem)] transition-colors hover:bg-muted"
           >
-            {link.icon ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={link.icon}
-                alt=""
-                className="size-[clamp(1.5rem,5vw,2rem)] shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <Link2 className="size-[clamp(1.25rem,4vw,1.5rem)] shrink-0 text-muted-foreground" />
-            )}
+            <BrandIcon
+              platform={link.platform}
+              url={link.url}
+              iconUrl={link.icon}
+              className="size-[clamp(2rem,7vw,2.5rem)]"
+            />
             <div className="flex min-w-0 flex-col">
               <span className="truncate font-medium">{link.platform}</span>
               <span className="truncate text-sm text-muted-foreground">

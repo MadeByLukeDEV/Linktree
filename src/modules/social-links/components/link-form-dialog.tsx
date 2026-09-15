@@ -14,6 +14,7 @@ import {
   updateSocialLinkAction,
 } from "@/modules/social-links/actions";
 import type { SocialLink } from "@/generated/prisma/client";
+import { BrandIcon } from "@/modules/social-links/components/brand-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -70,6 +71,9 @@ export function LinkFormDialog({
 
   const showOnProfile = watch("showOnProfile");
   const subdomain = watch("subdomain");
+  const platform = watch("platform");
+  const url = watch("url");
+  const icon = watch("icon");
 
   async function onSubmit(data: SocialLinkInput) {
     setFormError(null);
@@ -101,11 +105,20 @@ export function LinkFormDialog({
           <FieldGroup>
             <Field data-invalid={!!errors.platform || undefined}>
               <FieldLabel htmlFor="platform">{t("platform")}</FieldLabel>
-              <Input
-                id="platform"
-                placeholder="Instagram"
-                {...register("platform")}
-              />
+              <div className="flex items-center gap-2">
+                <BrandIcon
+                  platform={platform || ""}
+                  url={url}
+                  iconUrl={icon}
+                  className="size-8"
+                />
+                <Input
+                  id="platform"
+                  placeholder="Instagram"
+                  className="flex-1"
+                  {...register("platform")}
+                />
+              </div>
               <FieldError
                 errors={errors.platform ? [errors.platform] : undefined}
               />
@@ -135,6 +148,7 @@ export function LinkFormDialog({
             <Field data-invalid={!!errors.icon || undefined}>
               <FieldLabel htmlFor="icon">{t("iconUrl")}</FieldLabel>
               <Input id="icon" type="url" {...register("icon")} />
+              <FieldDescription>{t("iconUrlHint")}</FieldDescription>
               <FieldError errors={errors.icon ? [errors.icon] : undefined} />
             </Field>
 

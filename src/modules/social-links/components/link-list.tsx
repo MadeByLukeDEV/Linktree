@@ -23,7 +23,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { SocialLink } from "@/generated/prisma/client";
 import { deleteSocialLinkAction, reorderSocialLinksAction } from "@/modules/social-links/actions";
 import { LinkFormDialog } from "@/modules/social-links/components/link-form-dialog";
+import { BrandIcon } from "@/modules/social-links/components/brand-icon";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 function SortableLinkRow({
   link,
@@ -48,7 +50,7 @@ function SortableLinkRow({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-[clamp(0.5rem,1.5vw,0.75rem)]"
+      className="flex items-center gap-3 rounded-xl border border-border bg-card p-[clamp(0.625rem,2vw,0.875rem)] shadow-sm transition-shadow hover:shadow-md data-[dragging=true]:shadow-lg"
       data-dragging={isDragging || undefined}
     >
       <button
@@ -61,15 +63,32 @@ function SortableLinkRow({
         <GripVertical className="size-4" />
       </button>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <BrandIcon
+        platform={link.platform}
+        url={link.url}
+        iconUrl={link.icon}
+        className="size-[clamp(2rem,6vw,2.5rem)]"
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm font-medium">
           {link.platform} — {link.label}
         </span>
-        <span className="truncate text-xs text-muted-foreground">
-          {link.url}
-          {link.subdomain ? ` · ${link.subdomain}.${rootDomain}` : ""}
-          {!link.showOnProfile ? ` · ${t("hidden")}` : ""}
-        </span>
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="truncate text-xs text-muted-foreground">
+            {link.url}
+          </span>
+          {link.subdomain ? (
+            <Badge variant="secondary" className="shrink-0">
+              {link.subdomain}.{rootDomain}
+            </Badge>
+          ) : null}
+          {!link.showOnProfile ? (
+            <Badge variant="outline" className="shrink-0">
+              {t("hidden")}
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
       <LinkFormDialog

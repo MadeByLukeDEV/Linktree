@@ -36,6 +36,7 @@
       "label": "Label",
       "url": "URL",
       "iconUrl": "Icon URL (optional)",
+      "iconUrlHint": "Common platforms (Instagram, TikTok, YouTube, etc.) get their brand icon automatically. Set this only to override it.",
       "subdomain": "Subdomain forward (optional)",
       "subdomainPreview": "{subdomain}.{rootDomain} will redirect to this URL",
       "showOnProfile": "Show on profile",

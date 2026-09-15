@@ -162,6 +162,26 @@ prisma/
   (e.g. wrapping `Dialog`/`DropdownMenu` around your own button) uses Base
   UI's `render` prop — `<DialogTrigger render={<Button>...</Button>} />` —
   not Radix's `asChild`.
+- **Font**: `Plus Jakarta Sans` (`next/font/google`, `src/app/layout.tsx`),
+  named `--font-sans` directly on the `variable` option so it plugs straight
+  into `globals.css`'s `--font-sans: var(--font-sans)` indirection with no
+  edits needed there. Replaced the create-next-app default Geist Sans/Mono
+  — Geist Mono was unused (no monospace UI anywhere), so `--font-mono` now
+  just falls back to a generic system monospace stack instead of loading an
+  unused font.
+- **Brand icons**: `simple-icons` resolves a platform's real logo/color
+  automatically — `src/modules/social-links/lib/brand-icon.ts` maps a
+  curated set of ~28 common platforms (by normalized platform name, falling
+  back to the link's URL hostname) to an icon; the `BrandIcon` component
+  renders it inside a neutral `bg-muted` circle badge (so brand colors that
+  are near-black/near-white, e.g. GitHub, X, still read clearly in both
+  themes) with a generic `lucide` `Link2` fallback for anything unmatched.
+  The dashboard's create/edit form's "Icon URL" field always wins when set,
+  as a manual override for anything not in the curated list — **LinkedIn
+  has no icon in `simple-icons`** (removed from the library over brand-
+  enforcement requests), so that one always needs the manual override.
+  Deliberately curated rather than resolving from the full ~3000-icon set,
+  to keep the bundle small.
 - **Client components seeded from server props don't self-update on
   `revalidatePath`.** `useState(initialLinks)` only reads its argument on
   first mount — a parent Server Component re-rendering with fresh data after

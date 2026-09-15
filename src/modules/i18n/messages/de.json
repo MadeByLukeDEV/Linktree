@@ -36,6 +36,7 @@
       "label": "Beschriftung",
       "url": "URL",
       "iconUrl": "Icon-URL (optional)",
+      "iconUrlHint": "Bekannte Plattformen (Instagram, TikTok, YouTube, usw.) erhalten automatisch ihr Marken-Icon. Nur ausfüllen, um es zu überschreiben.",
       "subdomain": "Subdomain-Weiterleitung (optional)",
       "subdomainPreview": "{subdomain}.{rootDomain} leitet zu dieser URL weiter",
       "showOnProfile": "Auf Profil anzeigen",

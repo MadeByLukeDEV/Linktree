@@ -1,15 +1,13 @@
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/modules/auth/server";
-import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { PasskeyManager } from "@/modules/auth/components/passkey-manager";
 import { ProfileForm } from "@/modules/profile/components/profile-form";
 import * as profileService from "@/modules/profile/service";
 import { LinkList } from "@/modules/social-links/components/link-list";
 import * as socialLinksService from "@/modules/social-links/service";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { LocaleSwitcher } from "@/modules/i18n/components/locale-switcher";
-import { ThemeToggle } from "@/modules/theme/components/theme-toggle";
+import { DashboardHeader } from "./dashboard-header";
 
 // Session/profile/link data is always live and per-user -- see the matching
 // comment in src/app/page.tsx for why this also avoids Next's build-time
@@ -27,40 +25,32 @@ export default async function DashboardPage() {
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
 
   return (
-    <div className="flex flex-col gap-4 p-[clamp(1rem,4vw,2rem)]">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("signedInAs", { email: session?.user.email ?? "" })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <LocaleSwitcher />
-          <ThemeToggle />
-          <SignOutButton />
-        </div>
-      </div>
+    <div className="flex min-h-svh flex-col bg-muted/30">
+      <DashboardHeader email={session?.user.email ?? ""} t={t} />
 
-      <Tabs defaultValue="links">
-        <TabsList>
-          <TabsTrigger value="links">{t("tabs.links")}</TabsTrigger>
-          <TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
-          <TabsTrigger value="security">{t("tabs.security")}</TabsTrigger>
-        </TabsList>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-[clamp(1rem,4vw,2rem)] py-[clamp(1.5rem,4vw,2rem)]">
+        <Tabs defaultValue="links">
+          <TabsList className="mb-[clamp(1rem,3vw,1.5rem)]">
+            <TabsTrigger value="links">{t("tabs.links")}</TabsTrigger>
+            <TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
+            <TabsTrigger value="security">{t("tabs.security")}</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="links">
-          <LinkList initialLinks={links} rootDomain={rootDomain} />
-        </TabsContent>
+          <div className="rounded-2xl border border-border bg-card p-[clamp(1rem,3vw,1.5rem)] shadow-sm">
+            <TabsContent value="links">
+              <LinkList initialLinks={links} rootDomain={rootDomain} />
+            </TabsContent>
 
-        <TabsContent value="profile">
-          <ProfileForm profile={profile} />
-        </TabsContent>
+            <TabsContent value="profile">
+              <ProfileForm profile={profile} />
+            </TabsContent>
 
-        <TabsContent value="security">
-          <PasskeyManager />
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="security">
+              <PasskeyManager />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </main>
     </div>
   );
 }
