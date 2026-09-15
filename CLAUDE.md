@@ -262,7 +262,11 @@ config — document the exact steps here once Dokploy is set up (Phase 9).
       (`@dnd-kit`), create/edit dialog with subdomain-slug validation and a
       friendly "subdomain already in use" error, profile form, `sonner`
       toasts (added the missing `<Toaster />` to the root layout)
-- [ ] Phase 4 — public profile page
+- [x] Phase 4 — public profile page (`src/app/page.tsx`): avatar/name/bio +
+      visible links with staggered Framer Motion entrance, empty state,
+      `loading.tsx` skeleton. Verified `revalidatePath("/")` actually keeps
+      it in sync with dashboard edits (no rebuild needed) via a live
+      browser test
 - [ ] Phase 5 — data-driven subdomain redirects (`proxy.ts` + `redirects` module)
 - [ ] Phase 6 — YouTube latest video/short integration
 - [ ] Phase 7 — i18n (German/English, device default)
