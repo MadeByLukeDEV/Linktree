@@ -9,7 +9,14 @@ function createClient() {
   if (!url) {
     throw new Error("REDIS_URL is not set");
   }
-  return new Redis(url);
+  const client = new Redis(url, {
+    maxRetriesPerRequest: 2,
+    retryStrategy: (times) => Math.min(times * 500, 10_000),
+  });
+  client.on("error", (error) => {
+    console.error("Redis connection error:", error.message);
+  });
+  return client;
 }
 
 export const redis = globalThis._redis ?? createClient();

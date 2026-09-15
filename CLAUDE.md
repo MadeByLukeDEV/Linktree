@@ -151,7 +151,22 @@ prisma/
   old react-hook-form `Form` component doesn't exist in this style. Use the
   `Field`/`FieldGroup`/`FieldLabel`/`FieldError` primitives
   (`src/components/ui/field.tsx`) together with `react-hook-form` +
-  `@hookform/resolvers/zod` directly.
+  `@hookform/resolvers/zod` directly. Composing a custom trigger element
+  (e.g. wrapping `Dialog`/`DropdownMenu` around your own button) uses Base
+  UI's `render` prop — `<DialogTrigger render={<Button>...</Button>} />` —
+  not Radix's `asChild`.
+- **Client components seeded from server props don't self-update on
+  `revalidatePath`.** `useState(initialLinks)` only reads its argument on
+  first mount — a parent Server Component re-rendering with fresh data after
+  a mutation does *not* reset that state. Hit this in `LinkList`
+  (`src/modules/social-links/components/link-list.tsx`): after
+  `createSocialLinkAction`/`updateSocialLinkAction`, the list stayed stale
+  until reload. Fixed by having those actions return the created/updated
+  record and having the dialog call an `onSuccess(record)` callback that
+  updates the client list's local state directly, instead of relying on
+  `revalidatePath` to flow new props down through an already-mounted client
+  boundary. Apply the same pattern to any other server-seeded, client-owned
+  list/collection.
 
 ## Branching & commits
 
@@ -183,6 +198,20 @@ See [.env.example](.env.example): `DATABASE_URL`, `REDIS_URL`,
 `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ROOT_DOMAIN`. The user provides
 `DATABASE_URL` and `REDIS_URL` directly — no local Docker MariaDB/Redis
 containers for dev.
+
+**Redis reachability from this dev sandbox is unreliable** — raw TCP to the
+`REDIS_URL` host:port has timed out here (`connect ETIMEDOUT`) even though
+the same sandbox reaches `DATABASE_URL` (MariaDB) fine, most likely a
+firewall/allowlist difference on the Redis host, not a code issue. Because
+of this, every Redis call in the app (`src/lib/redirect-cache.ts`) is
+written to fail soft: a failed cache invalidation is logged and swallowed,
+never allowed to fail the write that triggered it, since Redis here is only
+a cache, not a source of truth. `src/lib/redis.ts` also caps
+`maxRetriesPerRequest`/backoff so a dead Redis degrades (slower writes on
+paths that touch the cache) instead of hanging. If Redis-dependent features
+(Phase 5 subdomain redirects, Phase 6 YouTube caching) seem to silently not
+cache anything, check reachability from wherever the app is actually
+running before assuming a code bug.
 
 ## Auth
 
@@ -228,7 +257,11 @@ config — document the exact steps here once Dokploy is set up (Phase 9).
 - [x] Phase 2 — BetterAuth (admin + passkey plugins), sign-in page (password
       and passkey), `/dashboard` route protection via `proxy.ts`,
       `pnpm create-owner` bootstrap script
-- [ ] Phase 3 — `social-links` + `profile` modules, dashboard CRUD
+- [x] Phase 3 — `social-links` + `profile` modules, dashboard CRUD: tabbed
+      dashboard (Links/Profile/Security), drag-to-reorder link list
+      (`@dnd-kit`), create/edit dialog with subdomain-slug validation and a
+      friendly "subdomain already in use" error, profile form, `sonner`
+      toasts (added the missing `<Toaster />` to the root layout)
 - [ ] Phase 4 — public profile page
 - [ ] Phase 5 — data-driven subdomain redirects (`proxy.ts` + `redirects` module)
 - [ ] Phase 6 — YouTube latest video/short integration
