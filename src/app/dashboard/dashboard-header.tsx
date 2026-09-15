@@ -4,10 +4,10 @@ import { LocaleSwitcher } from "@/modules/i18n/components/locale-switcher";
 import { ThemeToggle } from "@/modules/theme/components/theme-toggle";
 
 export function DashboardHeader({
-  email,
+  name,
   t,
 }: {
-  email: string;
+  name: string;
   t: Awaited<ReturnType<typeof getTranslations<"Dashboard">>>;
 }) {
   return (
@@ -18,7 +18,7 @@ export function DashboardHeader({
             {t("title")}
           </span>
           <span className="text-xs text-muted-foreground">
-            {t("signedInAs", { email })}
+            {t("welcomeBack", { name })}
           </span>
         </div>
         <div className="flex items-center gap-2">

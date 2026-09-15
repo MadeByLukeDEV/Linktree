@@ -23,10 +23,11 @@ export default async function DashboardPage() {
   ]);
 
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
+  const name = profile?.displayName || session?.user.email || "";
 
   return (
     <div className="flex min-h-svh flex-col bg-muted/30">
-      <DashboardHeader email={session?.user.email ?? ""} t={t} />
+      <DashboardHeader name={name} t={t} />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-[clamp(1rem,4vw,2rem)] py-[clamp(1.5rem,4vw,2rem)]">
         <Tabs defaultValue="links">

@@ -46,6 +46,9 @@ function SortableLinkRow({
     <motion.li
       ref={setNodeRef}
       layout
+      initial={{ opacity: 0, y: "0.5rem", scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,

@@ -4,6 +4,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { ThemeProvider } from "@/modules/theme/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { AnimatedBackground } from "@/components/effects/animated-background";
+import { CustomCursor } from "@/components/effects/custom-cursor";
 import "./globals.css";
 
 // Named "--font-sans" directly so it plugs into globals.css's
@@ -30,6 +32,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <NextIntlClientProvider>
+            <AnimatedBackground />
+            <CustomCursor />
             {children}
             <Toaster />
           </NextIntlClientProvider>

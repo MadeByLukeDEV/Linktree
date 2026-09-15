@@ -143,6 +143,40 @@ prisma/
 
 ## Frontend conventions
 
+- **Brand color**: `#00FFA8`, set directly as `--primary`/`--ring` in both
+  `:root` and `.dark` in `globals.css` (kept as a plain hex rather than
+  converted to match the rest of the oklch-based palette — mixing color
+  formats across custom properties is valid CSS). `--primary-foreground`
+  is a near-black in both themes for contrast against this bright color.
+- **Global decorative layer**: `src/components/effects/` holds
+  `AnimatedBackground` (a fixed, `pointer-events-none` grid + slowly
+  drifting blurred brand-color orbs, `-z-10`) and `CustomCursor` (a
+  spring-physics ring-and-dot that grows on hovering an interactive
+  element). Both mount once in the root layout so every page gets them.
+  `CustomCursor` only activates on `(pointer: fine)` devices and adds a
+  `custom-cursor-active` class to `<html>` once confirmed active — the
+  actual `cursor: none` CSS rule is scoped to both that class *and* an
+  `@media (pointer: fine)` guard in `globals.css`, so there's never a
+  window where the native cursor is hidden with nothing rendered to
+  replace it, and touch devices are entirely unaffected.
+- **`useSyncExternalStore`, not `useEffect` + `setState`, for "is this
+  mounted on the client" checks.** The React Compiler's lint rule flags a
+  direct `setState` call in an effect body as a same-render cascading
+  update. Two components need this pattern for the same reason (avoiding a
+  hydration mismatch / checking a client-only API once): `ThemeToggle`
+  (`src/modules/theme/components/theme-toggle.tsx`) and `CustomCursor.
+  useIsFinePointer` (checks `matchMedia`) — copy that pattern rather than
+  the classic `useEffect(() => setMounted(true), [])` idiom.
+- **Framer Motion + dnd-kit on the same element**: `SortableLinkRow`
+  (`src/modules/social-links/components/link-list.tsx`) is both a dnd-kit
+  sortable ref (owns `style.transform` for drag positioning) and a
+  `motion.li`. `initial`/`animate`/`exit` (one-shot, mount/unmount only)
+  coexist fine here — verified live with an actual drag gesture — but a
+  *continuously* active transform-based prop like `whileHover={{ scale }}`
+  on this same element is a known conflict risk (framer-motion and dnd-kit
+  would both be fighting to own `transform` on every frame) and was
+  deliberately left out; add hover feedback via non-transform CSS (e.g.
+  `hover:shadow-md`, already present) instead.
 - **Units: always `rem`, never `px`.** This includes the min/max bounds of
   any `clamp()` — e.g. `clamp(1rem, 2vw, 1.75rem)`, not
   `clamp(16px, 2vw, 28px)`.
@@ -274,6 +308,14 @@ the app's side). `nextCookies()` must stay last in the `plugins` array.
   script against the dev server; the "Add a passkey" / "Sign in with a
   passkey" buttons need a manual check in an actual browser with a key or
   Bitwarden set up.
+- Passkeys can be named on registration (`authClient.passkey.addPasskey({
+  name })`) and renamed/deleted afterward (`authClient.passkey.updatePasskey
+  ({ id, name })` / `.deletePasskey({ id })`, in `PasskeyManager`). Neither
+  method appears in `@better-auth/passkey`'s `client.d.mts` — they're
+  inferred client-side from the server plugin's type rather than hand-
+  declared (confirmed by `tsc --noEmit` passing, since static grep alone
+  couldn't confirm it); the plugin's own source comments document the exact
+  client method names this relies on.
 
 ## Subdomain forwards
 

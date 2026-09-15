@@ -20,7 +20,7 @@
   },
   "Dashboard": {
     "title": "Dashboard",
-    "signedInAs": "Signed in as {email}",
+    "welcomeBack": "Welcome back, {name}",
     "signOut": "Sign out",
     "tabs": {
       "links": "Links",
@@ -61,7 +61,14 @@
       "unnamedPasskey": "Unnamed passkey",
       "addPasskey": "Add a passkey",
       "waitingForAuthenticator": "Waiting for authenticator…",
-      "couldNotAddPasskey": "Could not add passkey"
+      "couldNotAddPasskey": "Could not add passkey",
+      "namePlaceholder": "Name this passkey (optional)",
+      "renamePasskey": "Rename",
+      "deletePasskey": "Delete",
+      "passkeyRenamed": "Passkey renamed",
+      "couldNotRenamePasskey": "Could not rename passkey",
+      "passkeyDeleted": "Passkey deleted",
+      "couldNotDeletePasskey": "Could not delete passkey"
     }
   },
   "LocaleSwitcher": {
