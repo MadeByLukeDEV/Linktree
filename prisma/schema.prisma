@@ -33,6 +33,8 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
+  passkeys Passkey[]
+
   @@unique([email])
   @@map("user")
 }
@@ -122,4 +124,26 @@ model SocialLink {
   updatedAt     DateTime @updatedAt
 
   @@map("social_link")
+}
+
+// modules/auth (cont'd) — the schema generator appends new auth-plugin
+// tables here rather than sorting them into the section above; Passkey
+// belongs to modules/auth same as User/Session/Account/Verification.
+model Passkey {
+  id           String    @id
+  name         String?   @db.Text
+  publicKey    String    @db.Text
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String    @db.Text
+  counter      Int
+  deviceType   String    @db.Text
+  backedUp     Boolean
+  transports   String?   @db.Text
+  createdAt    DateTime?
+  aaguid       String?   @db.Text
+
+  @@index([userId(length: 191)])
+  @@index([credentialID(length: 191)])
+  @@map("passkey")
 }

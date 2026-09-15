@@ -82,17 +82,24 @@ Other Prisma 7 changes vs. older knowledge:
   new long-text field instead of leaving the 191-char default.
 - **Migrations on this DB**: the provided MariaDB user has no `CREATEDB`
   grant, so `prisma migrate dev` fails with `P3014` (can't create the shadow
-  database). Workflow used instead for every schema change:
-  ```
-  pnpm exec prisma migrate diff --from-schema prisma/schema.prisma \
-    --to-schema prisma/schema.prisma --script   # (or --from-empty for the very first migration)
-  ```
-  then hand-create a `prisma/migrations/<timestamp>_<name>/migration.sql`
-  with the diff output and apply with `pnpm exec prisma migrate deploy`
-  (which doesn't need shadow-DB permissions). In practice: diff the *old*
-  schema state (via `--from-migrations prisma/migrations`) against the new
-  `schema.prisma` to get an incremental script, not a from-empty one, once
-  the first migration already exists.
+  database), and `prisma migrate diff --from-migrations` also fails (it
+  needs a `shadowDatabaseUrl` to replay migration history). Workflow used
+  instead for every schema change:
+  1. Get the *previous* committed `schema.prisma` into a temp file, e.g.
+     `git show main:prisma/schema.prisma > /tmp/schema_prev.prisma` (use
+     `--from-empty` instead of step 2's `--from-schema` for the very first
+     migration, when there is no previous state).
+  2. `pnpm exec prisma migrate diff --from-schema /tmp/schema_prev.prisma
+     --to-schema prisma/schema.prisma --script` — purely file-based, no DB
+     access needed — redirect the output into a new
+     `prisma/migrations/<timestamp>_<name>/migration.sql`.
+  3. `pnpm exec prisma migrate deploy` (applies pending migration files;
+     unlike `migrate dev` this needs no shadow-DB permissions).
+  4. `pnpm exec prisma generate` to refresh the client.
+  A `prisma/migrations/migration_lock.toml` (`provider = "mysql"`) must
+  exist for `migrate diff`/`deploy` to work — it's normally created
+  automatically by `migrate dev`, which this workflow never runs, so it was
+  created by hand once and is now committed.
 - BetterAuth's schema-generator CLI is the **`auth`** npm package (e.g.
   `pnpm dlx auth@1.7.5 generate --config src/modules/auth/server.ts -y`), not
   the deprecated `@better-auth/cli`. Regenerate the four auth tables this way
@@ -170,17 +177,44 @@ pnpm exec prisma studio           # inspect the DB
 ## Environment variables
 
 See [.env.example](.env.example): `DATABASE_URL`, `REDIS_URL`,
-`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `YOUTUBE_API_KEY`,
-`YOUTUBE_CHANNEL_ID`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ROOT_DOMAIN`. The
-user provides `DATABASE_URL` and `REDIS_URL` directly — no local Docker
-Postgres/Redis containers for dev.
+`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PASSKEY_RP_ID` (leave unset in dev
+— defaults to `localhost`; set to the production domain, e.g.
+`aboutselphy.com`, once deployed), `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`,
+`NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ROOT_DOMAIN`. The user provides
+`DATABASE_URL` and `REDIS_URL` directly — no local Docker MariaDB/Redis
+containers for dev.
+
+## Auth
+
+Single owner account, no public sign-up route. `src/modules/auth/server.ts`
+wires up BetterAuth with the Prisma adapter, the **admin** plugin
+(`role: "admin"` is set by hand on the owner row — `defaultRole` is
+`"user"`), and the **`@better-auth/passkey`** plugin so the owner can sign in
+with a hardware security key or a passkey manager like Bitwarden instead of
+a password (WebAuthn is authenticator-agnostic — both work the same way from
+the app's side). `nextCookies()` must stay last in the `plugins` array.
+
+- Create/update the owner account: `pnpm create-owner <email> <password>
+  [name]` (or `OWNER_EMAIL`/`OWNER_PASSWORD`/`OWNER_NAME` env vars) —
+  `scripts/create-owner.ts`, calls `auth.api.signUpEmail` then promotes the
+  user to `role: "admin"` via Prisma directly.
+- `src/proxy.ts` protects `/dashboard/**` by calling
+  `auth.api.getSession({ headers })` directly (safe because Next 16's
+  `proxy` always runs in the Node.js runtime) and redirecting to `/sign-in`
+  when there's no session.
+- Passkey registration/authentication is a real WebAuthn ceremony and can't
+  be driven headlessly — verified everything else (redirect-when-signed-out,
+  email/password sign-in, dashboard render, sign-out) with a Playwright
+  script against the dev server; the "Add a passkey" / "Sign in with a
+  passkey" buttons need a manual check in an actual browser with a key or
+  Bitwarden set up.
 
 ## Subdomain forwards
 
 `src/proxy.ts` inspects the `Host` header. If the hostname's subdomain isn't
 the root app domain (`social`, `www`, apex, `localhost`), it asks the
 `redirects` module to resolve that subdomain against the dashboard-managed
-`SocialLink.subdomain` field (Redis-cached, Postgres-backed) and redirects to
+`SocialLink.subdomain` field (Redis-cached, MariaDB-backed) and redirects to
 the resolved target URL, or falls through to the main site if unconfigured.
 Requires wildcard DNS (`*.aboutselphy.com`) and matching Dokploy domain
 config — document the exact steps here once Dokploy is set up (Phase 9).
@@ -191,10 +225,9 @@ config — document the exact steps here once Dokploy is set up (Phase 9).
       skeleton, Redis client, CLAUDE.md
 - [x] Phase 1 — Prisma schema (auth tables, `Profile`, `SocialLink`),
       migrated against the real DB
-- [ ] Phase 2 — BetterAuth + admin plugin, dashboard route protection
-      (`src/modules/auth/server.ts` already has a minimal config used to
-      generate the schema; still needs the route handler, sign-in page, and
-      dashboard route protection)
+- [x] Phase 2 — BetterAuth (admin + passkey plugins), sign-in page (password
+      and passkey), `/dashboard` route protection via `proxy.ts`,
+      `pnpm create-owner` bootstrap script
 - [ ] Phase 3 — `social-links` + `profile` modules, dashboard CRUD
 - [ ] Phase 4 — public profile page
 - [ ] Phase 5 — data-driven subdomain redirects (`proxy.ts` + `redirects` module)
