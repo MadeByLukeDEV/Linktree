@@ -105,6 +105,13 @@ Other Prisma 7 changes vs. older knowledge:
   the deprecated `@better-auth/cli`. Regenerate the four auth tables this way
   after changing `src/modules/auth/server.ts`, then reapply the diff workflow
   above for the resulting schema change.
+- `dotenv` and `tsx` are regular `dependencies`, not `devDependencies`, even
+  though that looks wrong at a glance. `prisma7.config.ts` unconditionally
+  `import`s `dotenv/config`, and that file is read by the `prisma` CLI on
+  every invocation including `migrate deploy` in production — a
+  production-only (`pnpm install --prod`) install would otherwise be
+  missing `dotenv` and fail. `tsx` runs `scripts/create-owner.ts`, which is
+  meant to be run against production too (see "Dokploy deployment" below).
 
 ## Modular monolith architecture
 
@@ -277,8 +284,7 @@ unconfigured ones fall back, reserved/main hosts route normally, and cache
 invalidation on edit/delete is immediate.
 
 Requires wildcard DNS (`*.aboutselphy.com`) and matching Dokploy domain
-config in production — document the exact steps here once Dokploy is set
-up (Phase 9).
+config in production — see the "Dokploy deployment" section below.
 
 ## i18n
 
@@ -313,6 +319,55 @@ knowing: `/` and `/_not-found` became dynamically rendered (were
 statically prerendered before this phase) since locale resolution reads
 cookies/headers on every request — expected and necessary, not a
 regression.
+
+## Dokploy deployment
+
+`Dockerfile` is a three-stage build (`deps` → `builder` → `runner`) on
+`node:22-alpine`. Deliberately **not** using `output: 'standalone'`: this
+project needs the full `prisma` CLI at container startup (`prisma migrate
+deploy` runs before the server starts, applying any migrations not yet
+recorded — safe to run on every start), and Next's standalone trace only
+picks up what the app code actually `import`s, not CLI binaries invoked as
+a subprocess. The `runner` stage instead does a real `pnpm install --prod`
+on the same Alpine base as the build, which is simpler and avoids
+cross-stage native-binary mismatches for `@prisma/engines` and friends —
+image size wasn't worth the added complexity at this project's scale.
+
+`scripts/create-owner.ts` is **not** copied into the runtime image — it
+imports the full `src/` source tree (auth/db modules), which the slim
+runner deliberately doesn't carry. Create or update the owner account by
+running `pnpm create-owner <email> <password>` from a local checkout with
+`DATABASE_URL` pointed at the production database — the script only needs
+DB access, not to run inside the container.
+
+**Required environment variables in Dokploy** (see `.env.example`):
+`DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (the
+real `https://social.aboutselphy.com`), `PASSKEY_RP_ID` (`aboutselphy.com`
+— must match the real domain or WebAuthn will reject registration/auth),
+`YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`, `NEXT_PUBLIC_SITE_URL` (same as
+`BETTER_AUTH_URL`), `NEXT_PUBLIC_ROOT_DOMAIN` (`aboutselphy.com`).
+
+**Domain/DNS**: the app listens on port 3000 (`EXPOSE 3000`) inside the
+container. Point Dokploy's domain config at this service for both
+`social.aboutselphy.com` and a wildcard `*.aboutselphy.com` (needed for the
+Phase 5 subdomain forwards — every forward hostname must route to this
+same service, since `src/proxy.ts` is what actually resolves and redirects
+them) — requires a wildcard DNS record for `*.aboutselphy.com` pointing at
+the Dokploy server, plus a matching wildcard domain/rule in Dokploy's
+reverse proxy config for this app.
+
+**Not verified**: Docker isn't available in this dev sandbox, so the
+`docker build` itself has not actually been run here. The Dockerfile is
+built from commands (`pnpm install`, `pnpm exec prisma generate`, `pnpm
+build`) that were exercised repeatedly and successfully throughout local
+development on the same `pnpm-workspace.yaml` build-approval config, which
+gives reasonable confidence, but do a real build (`docker build .`) before
+relying on this for an actual deploy, and watch specifically for: Alpine's
+musl libc vs. `@prisma/engines`' expected binary target, and whether
+`pnpm exec prisma migrate deploy` in the `CMD` needs
+`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`-style handling in a non-TTY
+container (it shouldn't, since `migrate deploy` — unlike `migrate reset`
+— isn't gated as a destructive command, but confirm on first real deploy).
 
 ## Feature status
 
@@ -358,4 +413,9 @@ regression.
       `setState` in an effect. Verified live: device `prefers-color-scheme:
       dark`/`light` both apply with no manual action, a manual toggle
       overrides it, and the override survives a reload.
-- [ ] Phase 9 — Dockerize for Dokploy
+- [x] Phase 9 — Dockerize for Dokploy — see the dedicated section above.
+      All other verification in this project was done live against the
+      real dev DB/Redis/browser; this one is the exception — Docker isn't
+      available in this dev sandbox, so the `docker build` itself has not
+      actually been run. Do a real build before the first production
+      deploy.
