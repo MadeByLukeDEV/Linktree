@@ -10,8 +10,23 @@ function createClient() {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalThis._prisma ?? createClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis._prisma = prisma;
+// Constructed lazily, on first real use, rather than at module load. Next.js
+// imports this module (transitively, via any page that touches a module
+// that touches Prisma) during `next build`'s page-data-collection step,
+// which runs without DATABASE_URL available in a Docker build -- eagerly
+// constructing the client here would crash the build itself, not just a
+// request.
+function getPrismaClient(): PrismaClient {
+  if (!globalThis._prisma) {
+    globalThis._prisma = createClient();
+  }
+  return globalThis._prisma;
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getPrismaClient();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});

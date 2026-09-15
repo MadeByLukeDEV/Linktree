@@ -23,8 +23,21 @@ function createClient() {
   return client;
 }
 
-export const redis = globalThis._redis ?? createClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis._redis = redis;
+// Constructed lazily, on first real use, rather than at module load -- see
+// the matching comment in src/lib/prisma.ts. Next.js imports this module
+// during `next build`'s page-data-collection step, which runs without
+// REDIS_URL available in a Docker build.
+function getRedisClient(): Redis {
+  if (!globalThis._redis) {
+    globalThis._redis = createClient();
+  }
+  return globalThis._redis;
 }
+
+export const redis = new Proxy({} as Redis, {
+  get(_target, prop) {
+    const client = getRedisClient();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});

@@ -356,18 +356,53 @@ them) — requires a wildcard DNS record for `*.aboutselphy.com` pointing at
 the Dokploy server, plus a matching wildcard domain/rule in Dokploy's
 reverse proxy config for this app.
 
-**Not verified**: Docker isn't available in this dev sandbox, so the
-`docker build` itself has not actually been run here. The Dockerfile is
-built from commands (`pnpm install`, `pnpm exec prisma generate`, `pnpm
-build`) that were exercised repeatedly and successfully throughout local
-development on the same `pnpm-workspace.yaml` build-approval config, which
-gives reasonable confidence, but do a real build (`docker build .`) before
-relying on this for an actual deploy, and watch specifically for: Alpine's
-musl libc vs. `@prisma/engines`' expected binary target, and whether
-`pnpm exec prisma migrate deploy` in the `CMD` needs
+**Docker isn't available in this dev sandbox**, so `docker build` has never
+been run here directly — the first real build happened on Dokploy itself,
+which caught a bug this sandbox couldn't have: see below. Beyond that,
+confidence in the Dockerfile still rests on `pnpm install`, `pnpm exec
+prisma generate`, and `pnpm build` having been exercised repeatedly and
+successfully in local dev on the same `pnpm-workspace.yaml` build-approval
+config — watch for Alpine's musl libc vs. `@prisma/engines`' expected
+binary target on the next real deploy, and confirm `pnpm exec prisma
+migrate deploy` in the `CMD` doesn't need
 `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`-style handling in a non-TTY
-container (it shouldn't, since `migrate deploy` — unlike `migrate reset`
-— isn't gated as a destructive command, but confirm on first real deploy).
+container (it shouldn't — `migrate deploy`, unlike `migrate reset`, isn't
+gated as a destructive command).
+
+**Bug found on the first real Dokploy build**: `next build` crashed
+building `/` with `Cannot read properties of undefined (reading
+'prepareCacheLength')` inside `new PrismaMariaDb(...)`. Root cause:
+`src/lib/prisma.ts` and `src/lib/redis.ts` both constructed their client
+**eagerly at module load** (`export const prisma = ... createClient()`).
+Next's build-time page-data-collection step imports every page's module
+graph to statically analyze it — which transitively imports these files —
+and Dokploy's `docker build` doesn't inject runtime env vars (`DATABASE_URL`
+/`REDIS_URL` are only present at container *run* time, via Dokploy's
+environment config, not during the build step). So the client constructors
+ran with `undefined` connection strings and crashed the entire build, not
+just a request. This didn't surface in local dev/`pnpm build` because
+`.env` is always present there.
+
+Fixed by making both clients construct lazily, on first real property
+access, via a `Proxy` that defers to a memoized singleton (see the comments
+in `src/lib/prisma.ts`/`src/lib/redis.ts`) — merely *importing* the module
+no longer does anything env-dependent. Also added `export const dynamic =
+"force-dynamic"` to `src/app/page.tsx` and `src/app/dashboard/page.tsx`
+(they were already effectively dynamic via cookies/headers reads elsewhere
+in the tree; this just stops Next from attempting a static-generation probe
+that would otherwise still trip the same code path and log a harmless but
+confusing caught error during every build). Verified locally by running
+`pnpm build` with `DATABASE_URL`/`REDIS_URL` unset — succeeds now (exit 0)
+where it previously crashed identically to the Dokploy failure — and by
+running `pnpm start` against a normal `.env` afterward to confirm the lazy
+client still works correctly for real requests (DB-backed home page, and a
+Redis-cached subdomain redirect both returned correctly).
+
+**Lesson for future modules**: any `src/lib/*.ts` singleton that reads an
+env var and touches a network client in its construction must defer that
+construction past module-evaluation time (the `Proxy` pattern here, or an
+equivalent lazy-getter), or it will crash the Docker build the moment any
+page imports it — regardless of whether that page ever actually calls it.
 
 ## Feature status
 

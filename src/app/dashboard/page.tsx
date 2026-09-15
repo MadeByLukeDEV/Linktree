@@ -11,6 +11,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LocaleSwitcher } from "@/modules/i18n/components/locale-switcher";
 import { ThemeToggle } from "@/modules/theme/components/theme-toggle";
 
+// Session/profile/link data is always live and per-user -- see the matching
+// comment in src/app/page.tsx for why this also avoids Next's build-time
+// static-vs-dynamic probe.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const [session, profile, links, t] = await Promise.all([
     auth.api.getSession({ headers: await headers() }),

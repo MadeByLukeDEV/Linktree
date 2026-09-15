@@ -9,6 +9,12 @@ import { isYoutubeConfigured } from "@/modules/youtube/service";
 import { LocaleSwitcher } from "@/modules/i18n/components/locale-switcher";
 import { ThemeToggle } from "@/modules/theme/components/theme-toggle";
 
+// Reads live profile/link data every request; also avoids Next's build-time
+// static-vs-dynamic probe attempting to prerender this page (which would
+// try to construct the Prisma client without DATABASE_URL available during
+// a Docker build and log a noisy, though harmless, caught error).
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [profile, links] = await Promise.all([
     profileService.getProfile(),
