@@ -302,7 +302,14 @@ up (Phase 9).
 - [x] Phase 5 — data-driven subdomain redirects (`proxy.ts` + `redirects`
       module), verified live against multiple subdomains with cache
       invalidation on edit/delete
-- [ ] Phase 6 — YouTube latest video/short integration
+- [x] Phase 6 — YouTube latest video/short integration: `modules/youtube`
+      (Redis-cached, 1h TTL; "Short" classified by duration <= 180s since
+      the API exposes no explicit flag), rendered in a `<Suspense>` boundary
+      on the public page so a slow/failing YouTube API never blocks the
+      rest of it. Not yet enabled — `YOUTUBE_API_KEY`/`YOUTUBE_CHANNEL_ID`
+      are still empty in `.env`; verified graceful degradation (page still
+      renders, nothing shown) both when unset and when the API call itself
+      fails
 - [ ] Phase 7 — i18n (German/English, device default)
 - [ ] Phase 8 — dark/light theme (device default)
 - [ ] Phase 9 — Dockerize for Dokploy
