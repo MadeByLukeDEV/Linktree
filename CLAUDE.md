@@ -499,6 +499,81 @@ dependency, and gracefully skips rendering (`isTwitchConfigured()`) when
   `TWITCH_WEBHOOK_SECRET` are set in Dokploy and `pnpm
   register-twitch-webhook` has actually been run against production.
 
+## SEO & social preview images (OG images)
+
+`src/app/layout.tsx` sets site-wide `Metadata` defaults: `metadataBase`
+(resolves relative OG/Twitter image URLs to an absolute one — without it
+Next falls back to a localhost URL crawlers can't reach), a title
+template (`"%s — AboutSelphy"`), and `openGraph`/`twitter` defaults
+(`card: "summary_large_image"`). Per-page metadata overrides these.
+
+**Next's metadata merging does not deep-merge nested objects** like
+`openGraph`/`twitter` across layout → page — a page's `twitter` object
+entirely replaces the layout's rather than merging into it. Caught this
+live: `src/app/page.tsx`'s `generateMetadata()` originally set `twitter:
+{ title, description }` without `card`, which silently reverted the
+Twitter card type to Next's "summary" default instead of the
+`summary_large_image` set in the layout. Any page-level `openGraph`/
+`twitter` override needs to repeat every field it cares about, not just
+the ones that differ from the layout.
+
+**A page whose own title already reads as a complete sentence including
+the site name** (e.g. `/onlyfans`'s "AboutSelphy — definitely a real
+subscription page") needs `title: { absolute: "..." }` instead of a plain
+string, or the layout's `"%s — AboutSelphy"` template appends the name a
+second time. Also caught live via a raw `curl | grep` check of the
+rendered `<title>`/`<meta property="og:title">` tags — worth doing that
+check on any new page's metadata rather than trusting it visually, since
+the duplication doesn't show up anywhere except the actual resolved
+`<title>` tag.
+
+**OG images** use Next's file-convention `opengraph-image.tsx` routes
+(`next/og`'s `ImageResponse`, powered by Satori — a flexbox-only renderer,
+every element needs an explicit `display: "flex"`, there's no default
+block layout):
+
+- `src/app/opengraph-image.tsx` — the public profile page's card. Reads
+  live `Profile` data (`force-dynamic`, same build-time-Prisma-crash
+  reasoning as `page.tsx`) so it always reflects the real display
+  name/bio/avatar. The avatar is fetched from `Profile.avatarUrl` (an
+  arbitrary external URL) — pre-checked with a plain `fetch()` +
+  `res.ok` before referencing it in the image, falling back to an
+  initials circle if that URL isn't reachable, rather than letting
+  Satori's own image fetch fail and 500 the whole route.
+- `src/app/onlyfans/opengraph-image.tsx` — the joke page's card, styled
+  to match its OnlyFans-blue theme. Fully static (no DB reads), so it's
+  prerendered once at build time rather than per-request. Reuses
+  `findOnlyFansAssetDataUri()` (`src/app/onlyfans/assets.ts`) to inline
+  the real avatar file as a base64 data URI — a plain relative `<img
+  src="/onlyfans/avatar.png">` doesn't work here since Satori has no
+  browser to resolve a relative URL against.
+- `src/lib/og-font.ts`'s `loadPlusJakartaSans()` fetches the actual
+  Plus Jakarta Sans font file from Google Fonts' CSS2 API at request/
+  build time (Satori has no access to `next/font`, fonts must be passed
+  in as raw bytes) — subsetted to only the characters actually used, via
+  the API's `text=` parameter.
+- **Plus Jakarta Sans has no glyphs for symbols like "✓" or emoji like
+  "🔒"**, and Satori's own automatic fallback-font fetch for missing
+  glyphs isn't reliable at build time — hit this as a real build warning
+  (`Failed to download dynamic font`) on the onlyfans OG image, which is
+  statically prerendered and so flakiness here would be a permanent part
+  of the build, not just an occasional slow request. Fixed by drawing the
+  checkmark badge and lock icon as inline SVG paths instead of text/emoji
+  characters — no font/network dependency at all for hardcoded content
+  like this. Where the text is user-authored and unpredictable (the
+  profile bio, in the root OG image), added `emoji: "twemoji"` to that
+  `ImageResponse`'s options instead, so Satori renders any emoji as images
+  rather than relying on font glyphs.
+
+**`robots.ts`/`sitemap.ts`** (file-convention routes, `src/app/`):
+`/dashboard`, `/sign-in`, and `/api/` are disallowed in `robots.txt` and
+also carry `robots: { index: false, follow: false }` metadata directly on
+those pages (belt-and-suspenders — a crawler ignoring the per-page meta
+tag still gets steered away by `robots.txt`). The sitemap deliberately
+lists only the public profile page, not `/onlyfans` — that stays
+crawlable (nothing blocks it) but isn't actively promoted as a priority
+page via the sitemap.
+
 ## i18n
 
 `next-intl`, deliberately **without locale-prefixed routing** (no
@@ -735,3 +810,16 @@ page imports it — regardless of whether that page ever actually calls it.
       under Subdomain forwards above. `STATIC_SUBDOMAIN_PAGES` rewrite in
       `proxy.ts`, pure-frontend parody page, no DB/dashboard involvement.
       Verified locally via Host-header spoofing and a screenshot.
+- [x] SEO & OG images — see the dedicated section above. `metadataBase`
+      + title template + `openGraph`/`twitter` defaults in the root
+      layout, `generateMetadata()` on the public page reflecting real
+      Profile data, dynamic `opengraph-image.tsx` routes for both the
+      public page and the onlyfans joke page, `robots.ts`/`sitemap.ts`.
+      Verified live: fetched both generated OG images directly (confirmed
+      real 1200x630 PNGs, avatar/branding rendering correctly) and
+      grepped the actual rendered `<title>`/`<meta>` tags on `/`,
+      `/onlyfans`, and the `/dashboard` → `/sign-in` redirect — caught and
+      fixed two real bugs this way (a dropped Twitter card type from
+      non-deep-merged metadata, and a duplicated site name in the
+      onlyfans page's title) that wouldn't have been obvious from a
+      visual check alone.

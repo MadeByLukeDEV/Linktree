@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/modules/auth/server";
@@ -14,6 +15,11 @@ import { DashboardHeader } from "./dashboard-header";
 // comment in src/app/page.tsx for why this also avoids Next's build-time
 // static-vs-dynamic probe.
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardPage() {
   const [session, profile, groupedLinks, t] = await Promise.all([

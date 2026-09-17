@@ -15,9 +15,29 @@ const fontSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+// metadataBase resolves any relative OG/Twitter image URL (including the
+// ones next/og's opengraph-image.tsx files generate) into an absolute one
+// -- without it, Next falls back to a localhost URL that social media
+// crawlers and search engines can't reach, and warns about it at build
+// time. Per-page metadata (title, description, robots) overrides these
+// site-wide defaults; openGraph/twitter here just cover pages that don't
+// set their own.
 export const metadata: Metadata = {
-  title: "aboutselphy",
-  description: "Social media link tree",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "AboutSelphy",
+    template: "%s — AboutSelphy",
+  },
+  description: "Find AboutSelphy everywhere, all in one place.",
+  openGraph: {
+    siteName: "AboutSelphy",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

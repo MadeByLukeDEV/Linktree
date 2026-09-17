@@ -1,7 +1,17 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { BadgeCheck, Lock, Heart, MessageCircle, Image as ImageIcon } from "lucide-react";
 import { SubscribeButton } from "./subscribe-button";
 import { findOnlyFansAsset } from "./assets";
+
+export const metadata: Metadata = {
+  // `absolute` bypasses the root layout's "%s — AboutSelphy" title
+  // template -- this title already reads as a complete sentence including
+  // the name, so the template would otherwise duplicate "AboutSelphy".
+  title: { absolute: "AboutSelphy — definitely a real subscription page" },
+  description:
+    "100% authentic exclusive content. No refunds — there's nothing to refund, this is a joke.",
+};
 
 // Pure joke page, no backend at all -- every stat/caption below is
 // hardcoded, nothing reads from the Profile/SocialLink tables. Served by
@@ -19,7 +29,7 @@ import { findOnlyFansAsset } from "./assets";
 const LOCKED_POSTS = [
   { asset: "posts/1", emoji: "🙃", caption: "Me pretending to be productive today" },
   { asset: "posts/2", emoji: "🧹", caption: "Peak under the Maid Outfit!" },
-  { asset: "posts/3", emoji: "🌙", caption: "3am thoughts I probably shouldn't share" },
+  { asset: "posts/3", emoji: "😘 ", caption: "Alone time with Dav"  },
   { asset: "posts/4", emoji: "😈", caption: "Take a look at my thighhighs collection" },
   { asset: "posts/5", emoji: "🚪", caption: "Sneak Peak under the desk while I am streaming" },
   { asset: "posts/6", emoji: "👀", caption: "What actually happens during \"brb 5 min\"" },
