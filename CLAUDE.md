@@ -427,8 +427,27 @@ the page — its click handler just fires a `sonner` toast punchline, no
 server action, no real subscription flow of any kind. Verified locally
 with `curl -H "Host: onlyfans.aboutselphy.com" http://localhost:3000/`
 (same Host-header-spoofing approach as the dashboard-driven forwards
-above) rendering the joke page's markup, and visually via a Playwright
-screenshot.
+above) rendering the joke page's markup; a Playwright visual screenshot
+was attempted but Chromium failed to launch in this dev sandbox on an
+unrelated bare-launch test too, so the actual look was confirmed instead
+via a screenshot the user took of their own local run.
+
+**Images** (banner, avatar, each of the 6 post covers) are optional
+static files under `public/onlyfans/` — `findOnlyFansAsset()`
+(`src/app/onlyfans/assets.ts`) does a server-side `fs.existsSync` check
+per asset (accepting `.jpg`/`.jpeg`/`.png`/`.webp`, first match wins) and
+falls back to the original placeholder (gradient banner, "AS" initials,
+emoji+gradient post tile) when a file isn't there yet — same
+"render nothing/a placeholder until configured" pattern as
+`isYoutubeConfigured()`/`isTwitchConfigured()` elsewhere. Expected paths:
+`public/onlyfans/banner.*`, `public/onlyfans/avatar.*`,
+`public/onlyfans/posts/1.*` through `posts/6.*`. Post covers render
+blurred + darkened (`blur-[3px] brightness-75`) under the lock overlay,
+matching a real "locked preview" look. This was the first local static
+asset usage in the project (no `public/` directory existed before) —
+**images placed here must be committed to git**, since Dokploy builds
+straight from the repo; they won't appear in production just by existing
+on a local machine.
 
 ## Twitch live badge
 

@@ -1,28 +1,44 @@
+import Image from "next/image";
 import { BadgeCheck, Lock, Heart, MessageCircle, Image as ImageIcon } from "lucide-react";
 import { SubscribeButton } from "./subscribe-button";
+import { findOnlyFansAsset } from "./assets";
 
-// Pure joke page, no backend involved -- every number/caption below is
-// hardcoded, not read from the Profile/SocialLink tables. Served by
+// Pure joke page, no backend at all -- every stat/caption below is
+// hardcoded, nothing reads from the Profile/SocialLink tables. Served by
 // rewriting onlyfans.<root domain> straight here in src/proxy.ts, bypassing
 // the dashboard-driven subdomain-forward system entirely (see the
 // STATIC_SUBDOMAIN_PAGES comment there). Colors are hardcoded to the real
 // OnlyFans light theme regardless of the visitor's system dark/light
 // preference -- the joke reads better matching the real thing exactly than
 // adapting to this app's own dark mode.
+//
+// Images (banner, avatar, each post cover) are optional static files under
+// public/onlyfans/ -- see assets.ts. Nothing here breaks if they're
+// missing; it just falls back to the placeholder gradient/initials/emoji
+// used before any images existed.
 const LOCKED_POSTS = [
-  { emoji: "🎯", caption: "Exclusive Hunt: Showdown POV — the clutch nobody saw coming", likes: 812, comments: 64 },
-  { emoji: "😤", caption: "Uncut rage moments compilation (banned from Discord for this one)", likes: 634, comments: 41 },
-  { emoji: "🎧", caption: "The Spotify playlist I cry to at 3am", likes: 291, comments: 18 },
-  { emoji: "🍕", caption: "Behind the scenes at the Tiny Corner Discord game night", likes: 455, comments: 33 },
-  { emoji: "📼", caption: "Full unedited VOD from last night's stream", likes: 723, comments: 52 },
-  { emoji: "🤫", caption: "TikTok bloopers they made me take down", likes: 981, comments: 77 },
-];
+  { asset: "posts/1", emoji: "🙃", caption: "Me pretending to be productive today" },
+  { asset: "posts/2", emoji: "🧹", caption: "The one time I actually cleaned my room" },
+  { asset: "posts/3", emoji: "🌙", caption: "3am thoughts I probably shouldn't share" },
+  { asset: "posts/4", emoji: "😈", caption: "My villain origin story (redacted)" },
+  { asset: "posts/5", emoji: "🚪", caption: "Rare footage of me leaving the house" },
+  { asset: "posts/6", emoji: "👀", caption: "What actually happens during \"brb 5 min\"" },
+] as const;
+
+const POST_LIKES = [812, 634, 291, 455, 723, 981];
+const POST_COMMENTS = [64, 41, 18, 33, 52, 77];
 
 export default function OnlyFansPage() {
+  const bannerSrc = findOnlyFansAsset("banner");
+  const avatarSrc = findOnlyFansAsset("avatar");
+
   return (
     <div className="min-h-svh bg-white font-sans text-neutral-900">
       <div className="mx-auto flex w-full max-w-2xl flex-col">
-        <div className="relative h-[clamp(6rem,25vw,10rem)] w-full bg-gradient-to-br from-[#00aff0] via-[#0090c8] to-[#005f8a]">
+        <div className="relative h-[clamp(6rem,25vw,10rem)] w-full overflow-hidden bg-linear-to-br from-[#00aff0] via-[#0090c8] to-[#005f8a]">
+          {bannerSrc ? (
+            <Image src={bannerSrc} alt="" fill priority className="object-cover" />
+          ) : null}
           <span className="absolute top-[clamp(0.75rem,3vw,1.25rem)] right-[clamp(0.75rem,3vw,1.25rem)] rounded-full bg-black/60 px-[clamp(0.625rem,2vw,0.75rem)] py-1 text-[clamp(0.6875rem,2vw,0.75rem)] font-medium text-white">
             🔥 Exclusive Content
           </span>
@@ -30,8 +46,12 @@ export default function OnlyFansPage() {
 
         <div className="flex flex-col gap-[clamp(0.75rem,2.5vw,1rem)] px-[clamp(1rem,4vw,1.5rem)]">
           <div className="-mt-[clamp(2.5rem,10vw,3.5rem)]">
-            <div className="flex size-[clamp(5rem,18vw,6.5rem)] items-center justify-center rounded-full border-[0.25rem] border-white bg-neutral-900 text-[clamp(1.5rem,6vw,2rem)] font-bold text-white">
-              AS
+            <div className="relative flex size-[clamp(5rem,18vw,6.5rem)] items-center justify-center overflow-hidden rounded-full border-4 border-white bg-neutral-900 text-[clamp(1.5rem,6vw,2rem)] font-bold text-white">
+              {avatarSrc ? (
+                <Image src={avatarSrc} alt="" fill className="object-cover" />
+              ) : (
+                "AS"
+              )}
             </div>
           </div>
 
@@ -52,9 +72,8 @@ export default function OnlyFansPage() {
 
           <p className="text-[clamp(0.875rem,3vw,0.9375rem)] leading-relaxed text-neutral-800">
             Definitely a real subscription page 😇 100% authentic exclusive
-            content, mostly involving dying repeatedly in Hunt: Showdown.
-            No refunds — there&apos;s nothing to refund, this is a joke. For
-            the actual real socials, scroll to the bottom 👇
+            content. No refunds — there&apos;s nothing to refund, this is a
+            joke. For the actual real socials, scroll to the bottom 👇
           </p>
 
           <SubscribeButton />
@@ -68,30 +87,42 @@ export default function OnlyFansPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-[clamp(0.5rem,2vw,0.75rem)] pb-[clamp(2rem,6vw,3rem)] sm:grid-cols-3">
-            {LOCKED_POSTS.map((post) => (
-              <div
-                key={post.caption}
-                className="relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-neutral-200 to-neutral-300"
-              >
-                <span className="text-[clamp(1.75rem,8vw,2.25rem)] opacity-40 blur-[2px]">
-                  {post.emoji}
-                </span>
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/45 px-[clamp(0.5rem,2vw,0.75rem)] text-center text-white backdrop-blur-sm">
-                  <Lock className="size-[clamp(1.25rem,4vw,1.5rem)]" />
-                  <p className="text-[clamp(0.6875rem,2.2vw,0.75rem)] leading-snug font-medium">
-                    {post.caption}
-                  </p>
-                  <div className="flex items-center gap-3 text-[clamp(0.625rem,2vw,0.6875rem)] text-white/80">
-                    <span className="flex items-center gap-1">
-                      <Heart className="size-3" /> {post.likes}
+            {LOCKED_POSTS.map((post, index) => {
+              const coverSrc = findOnlyFansAsset(post.asset);
+              return (
+                <div
+                  key={post.caption}
+                  className="relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-lg bg-linear-to-br from-neutral-200 to-neutral-300"
+                >
+                  {coverSrc ? (
+                    <Image
+                      src={coverSrc}
+                      alt=""
+                      fill
+                      className="object-cover blur-[3px] brightness-75"
+                    />
+                  ) : (
+                    <span className="text-[clamp(1.75rem,8vw,2.25rem)] opacity-40 blur-[2px]">
+                      {post.emoji}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <MessageCircle className="size-3" /> {post.comments}
-                    </span>
+                  )}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/45 px-[clamp(0.5rem,2vw,0.75rem)] text-center text-white backdrop-blur-sm">
+                    <Lock className="size-[clamp(1.25rem,4vw,1.5rem)]" />
+                    <p className="text-[clamp(0.6875rem,2.2vw,0.75rem)] leading-snug font-medium">
+                      {post.caption}
+                    </p>
+                    <div className="flex items-center gap-3 text-[clamp(0.625rem,2vw,0.6875rem)] text-white/80">
+                      <span className="flex items-center gap-1">
+                        <Heart className="size-3" /> {POST_LIKES[index]}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MessageCircle className="size-3" /> {POST_COMMENTS[index]}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex flex-col items-center gap-3 border-t border-neutral-200 py-[clamp(1.5rem,5vw,2rem)] text-center">
