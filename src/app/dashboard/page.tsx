@@ -8,6 +8,7 @@ import { ProfileForm } from "@/modules/profile/components/profile-form";
 import * as profileService from "@/modules/profile/service";
 import { LinkList } from "@/modules/social-links/components/link-list";
 import * as socialLinksService from "@/modules/social-links/service";
+import { TwitchStatus } from "@/modules/twitch/components/twitch-status";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DashboardHeader } from "./dashboard-header";
 import { DashboardGuide } from "./guide";
@@ -31,6 +32,7 @@ export default async function DashboardPage() {
   ]);
 
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
+  const twitchCallbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/twitch/eventsub`;
   // The logged-in account's own name -- NOT profile.displayName, which is
   // the site's public-facing name and would show the owner's name to a
   // signed-in moderator instead of their own.
@@ -49,6 +51,9 @@ export default async function DashboardPage() {
               <TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
             ) : null}
             <TabsTrigger value="security">{t("tabs.security")}</TabsTrigger>
+            {canEditProfile ? (
+              <TabsTrigger value="twitch">{t("tabs.twitch")}</TabsTrigger>
+            ) : null}
             <TabsTrigger value="guide">{t("tabs.guide")}</TabsTrigger>
           </TabsList>
 
@@ -70,6 +75,12 @@ export default async function DashboardPage() {
             <TabsContent value="security">
               <PasskeyManager />
             </TabsContent>
+
+            {canEditProfile ? (
+              <TabsContent value="twitch">
+                <TwitchStatus expectedCallbackUrl={twitchCallbackUrl} />
+              </TabsContent>
+            ) : null}
 
             <TabsContent value="guide">
               <DashboardGuide />

@@ -518,11 +518,53 @@ dependency, and gracefully skips rendering (`isTwitchConfigured()`) when
   flakiness documented above (it affected the already-working YouTube cache
   identically in the same session) — confirmed via server logs that the
   app issued exactly the right Redis commands regardless, so this is that
-  known infra issue, not a bug in this feature. The real EventSub handshake
-  against the deployed callback URL still needs a live check once
-  `TWITCH_CLIENT_ID`/`TWITCH_CLIENT_SECRET`/`TWITCH_BROADCASTER_LOGIN`/
-  `TWITCH_WEBHOOK_SECRET` are set in Dokploy and `pnpm
-  register-twitch-webhook` has actually been run against production.
+  known infra issue, not a bug in this feature.
+
+### Diagnosing "the webhook doesn't work" / no logs about it
+
+Two things were missing that made this genuinely hard to debug from
+Dokploy's logs alone, both now fixed:
+
+1. **The route logged nothing on success**, only on a Redis failure deep
+   inside `service.ts` — a missing/failed subscription produced zero log
+   lines anywhere, indistinguishable from "nothing's wrong, it just never
+   happens to fire." `src/app/api/twitch/eventsub/route.ts` now logs
+   every branch: bad signature (`console.warn`), the verification
+   challenge, each notification type received, and revocations (with
+   Twitch's given reason).
+2. **There was no way to see the *actual* subscription state from inside
+   the app** — the running app has no DB row or local record of what was
+   registered; that only exists on Twitch's side. Added an admin-only
+   dashboard tab, `src/modules/twitch/components/twitch-status.tsx`
+   (`Twitch` tab, gated the same as Profile), which queries Twitch's
+   Helix API directly (`checkEventSubStatus()` in `service.ts`, same
+   token-fetch logic as `scripts/list-twitch-subscriptions.ts`, kept
+   separate rather than shared since the scripts aren't part of the app's
+   module system) for real subscription status, plus a per-var
+   environment-variable checklist. **Fetched purely client-side on tab
+   open** (`useEffect`, not during the dashboard's server render) —
+   this hits Twitch's API directly, and a slow/down Twitch shouldn't be
+   able to slow down the entire dashboard's page load for the admin just
+   because this tab exists.
+
+**Root-caused live**: the status tab showed zero subscriptions registered
+at all — `pnpm register-twitch-webhook` had never actually been run
+against the real production URL. Ran it with `NEXT_PUBLIC_SITE_URL`
+overridden to the production domain (the script has no DB/Redis
+dependency, only needs the four `TWITCH_*` vars plus that one URL, so
+this needed no other production access). Both subscriptions were created
+but stayed stuck in `webhook_callback_verification_pending` — a direct
+`curl -X POST` to the production callback confirmed the route itself is
+reachable and correctly rejects an unsigned request (`403`), which
+narrows the pending status down to **the webhook secret used at
+registration not matching the `TWITCH_WEBHOOK_SECRET` the running
+production app checks against** — those have to be the exact same value
+in both places (local `.env`, used to register, and Dokploy's env, used
+to verify), and there's no way to tell from Twitch's side that they
+differ other than the subscription silently stuck in `pending` (or
+`webhook_callback_verification_failed` once Twitch gives up). Confirming
+they match, then re-registering, is the next step if this recurs — a
+stuck `pending` subscription doesn't self-heal by waiting.
 
 ## SEO & social preview images (OG images)
 
@@ -861,3 +903,11 @@ page imports it — regardless of whether that page ever actually calls it.
       expanded multiple sections at once, confirmed the label-convention
       examples (handle/description/partner-code) and the LinkedIn
       icon note render correctly.
+- [x] Twitch webhook diagnostics — see "Diagnosing 'the webhook doesn't
+      work'" under Twitch live badge above. Admin-only dashboard tab
+      querying Twitch's actual EventSub subscription status, plus real
+      logging in the webhook route (which previously logged nothing on
+      success at all). Used live to root-cause the reported "webhook
+      doesn't work, no logs" issue down to a likely webhook-secret
+      mismatch between local `.env` and Dokploy's env — see that section
+      for the full diagnosis and next step.
