@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-const EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
+const EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif"];
 
 // Drop a matching file into public/onlyfans/ (or public/onlyfans/posts/ for
 // numbered posts) with any of the extensions above and it's picked up on

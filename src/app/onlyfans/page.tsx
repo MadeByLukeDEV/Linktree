@@ -18,7 +18,7 @@ import { findOnlyFansAsset } from "./assets";
 // used before any images existed.
 const LOCKED_POSTS = [
   { asset: "posts/1", emoji: "🙃", caption: "Me pretending to be productive today" },
-  { asset: "posts/2", emoji: "🧹", caption: "The one time I actually cleaned my room" },
+  { asset: "posts/2", emoji: "🧹", caption: "At your service master" },
   { asset: "posts/3", emoji: "🌙", caption: "3am thoughts I probably shouldn't share" },
   { asset: "posts/4", emoji: "😈", caption: "My villain origin story (redacted)" },
   { asset: "posts/5", emoji: "🚪", caption: "Rare footage of me leaving the house" },
@@ -27,6 +27,13 @@ const LOCKED_POSTS = [
 
 const POST_LIKES = [812, 634, 291, 455, 723, 981];
 const POST_COMMENTS = [64, 41, 18, 33, 52, 77];
+
+// Next's built-in image optimizer only keeps a GIF's first frame when
+// resizing/reformatting it -- unoptimized serves it as-is instead, which
+// is the only way to keep it animated.
+function isGif(src: string) {
+  return src.endsWith(".gif");
+}
 
 export default function OnlyFansPage() {
   const bannerSrc = findOnlyFansAsset("banner");
@@ -37,7 +44,14 @@ export default function OnlyFansPage() {
       <div className="mx-auto flex w-full max-w-2xl flex-col">
         <div className="relative h-[clamp(6rem,25vw,10rem)] w-full overflow-hidden bg-linear-to-br from-[#00aff0] via-[#0090c8] to-[#005f8a]">
           {bannerSrc ? (
-            <Image src={bannerSrc} alt="" fill priority className="object-cover" />
+            <Image
+              src={bannerSrc}
+              alt=""
+              fill
+              priority
+              unoptimized={isGif(bannerSrc)}
+              className="object-cover"
+            />
           ) : null}
           <span className="absolute top-[clamp(0.75rem,3vw,1.25rem)] right-[clamp(0.75rem,3vw,1.25rem)] rounded-full bg-black/60 px-[clamp(0.625rem,2vw,0.75rem)] py-1 text-[clamp(0.6875rem,2vw,0.75rem)] font-medium text-white">
             🔥 Exclusive Content
@@ -48,7 +62,13 @@ export default function OnlyFansPage() {
           <div className="-mt-[clamp(2.5rem,10vw,3.5rem)]">
             <div className="relative flex size-[clamp(5rem,18vw,6.5rem)] items-center justify-center overflow-hidden rounded-full border-4 border-white bg-neutral-900 text-[clamp(1.5rem,6vw,2rem)] font-bold text-white">
               {avatarSrc ? (
-                <Image src={avatarSrc} alt="" fill className="object-cover" />
+                <Image
+                  src={avatarSrc}
+                  alt=""
+                  fill
+                  unoptimized={isGif(avatarSrc)}
+                  className="object-cover"
+                />
               ) : (
                 "AS"
               )}
@@ -99,6 +119,7 @@ export default function OnlyFansPage() {
                       src={coverSrc}
                       alt=""
                       fill
+                      unoptimized={isGif(coverSrc)}
                       className="object-cover blur-[3px] brightness-75"
                     />
                   ) : (
