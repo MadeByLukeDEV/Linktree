@@ -10,6 +10,7 @@ import { LinkList } from "@/modules/social-links/components/link-list";
 import * as socialLinksService from "@/modules/social-links/service";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DashboardHeader } from "./dashboard-header";
+import { DashboardGuide } from "./guide";
 
 // Session/profile/link data is always live and per-user -- see the matching
 // comment in src/app/page.tsx for why this also avoids Next's build-time
@@ -48,6 +49,7 @@ export default async function DashboardPage() {
               <TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
             ) : null}
             <TabsTrigger value="security">{t("tabs.security")}</TabsTrigger>
+            <TabsTrigger value="guide">{t("tabs.guide")}</TabsTrigger>
           </TabsList>
 
           <div className="rounded-2xl border border-border bg-card p-[clamp(1rem,3vw,1.5rem)] shadow-sm">
@@ -67,6 +69,10 @@ export default async function DashboardPage() {
 
             <TabsContent value="security">
               <PasskeyManager />
+            </TabsContent>
+
+            <TabsContent value="guide">
+              <DashboardGuide />
             </TabsContent>
           </div>
         </Tabs>

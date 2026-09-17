@@ -25,7 +25,8 @@
     "tabs": {
       "links": "Links",
       "profile": "Profil",
-      "security": "Sicherheit"
+      "security": "Sicherheit",
+      "guide": "Anleitung"
     },
     "Links": {
       "heading": "Links",

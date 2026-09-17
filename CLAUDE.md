@@ -370,6 +370,31 @@ would reject the submit.
   on the real site and must be deleted again after testing, not left
   behind.
 
+### Dashboard guide tab
+
+A fourth dashboard tab, `src/app/dashboard/guide.tsx`, visible to both
+roles (unlike Profile, which is admin-only) — a plain-English walkthrough
+for moderators covering how to add/edit links, the Platform vs. Label
+field distinction (Label has no fixed format — it's used for a handle, a
+short description, or a `Code: ...`-prefixed partner/referral code
+depending on the link), which platform names get an automatic brand icon
+and which need a manual Icon URL, groups, subdomain forwards, passkeys,
+and what moderators can't do. Built with shadcn's `Accordion`
+(`multiple` prop, so several sections can stay open at once) so it's
+scannable rather than one long wall of text.
+
+**Deliberately English-only**, unlike every other dashboard string —
+the only exception to the i18n module's "every UI string gets both
+languages" rule in this codebase. This is a large amount of prose, and
+nothing enforces the English/German versions staying in sync as it's
+edited (see the i18n section below) — for chrome-sized strings like a
+tab label that's a trivial cost, but for a wall of reference text like
+this it's a real, compounding maintenance burden, so only the tab label
+itself (`Dashboard.tabs.guide`) is translated; the guide's body content
+is hardcoded English in `guide.tsx`, not routed through next-intl at
+all. If this guide needs a German version later, it needs a real
+decision about how to keep it in sync, not just a translation pass.
+
 ## Subdomain forwards
 
 `src/proxy.ts` runs on every path except static assets (`matcher:
@@ -828,3 +853,11 @@ page imports it — regardless of whether that page ever actually calls it.
       non-deep-merged metadata, and a duplicated site name in the
       onlyfans page's title) that wouldn't have been obvious from a
       visual check alone.
+- [x] Dashboard guide tab — see "Dashboard guide tab" under Auth above.
+      A fourth tab (`src/app/dashboard/guide.tsx`) visible to both roles,
+      an `Accordion`-based walkthrough for moderators. Deliberately
+      English-only body content (only the tab label is translated) —
+      see that section for why. Verified live signed in as the owner:
+      expanded multiple sections at once, confirmed the label-convention
+      examples (handle/description/partner-code) and the LinkedIn
+      icon note render correctly.
