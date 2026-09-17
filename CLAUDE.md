@@ -546,6 +546,22 @@ on the same Alpine base as the build, which is simpler and avoids
 cross-stage native-binary mismatches for `@prisma/engines` and friends —
 image size wasn't worth the added complexity at this project's scale.
 
+**Bug found shipping the `/onlyfans` page's images**: the `runner`
+stage's `COPY` list never included `public/`, because that directory
+didn't exist anywhere in the project until the onlyfans images feature
+added it — `next start` serves static assets from `public/` at runtime,
+and `findOnlyFansAsset()`'s `fs.existsSync` check reads from that same
+directory, so with it missing entirely from the running container both
+silently agreed there were "no images" and fell back to the placeholder,
+with no error anywhere. Looked exactly like "haven't added the images
+yet" rather than a real bug. Fixed by adding `COPY --from=builder
+/app/public ./public` alongside the other `COPY` lines. **Lesson**: any
+future top-level directory the app depends on at runtime (`public/`
+included) needs an explicit `COPY` line in the `runner` stage — nothing
+here infers it automatically, and a missing one fails silently rather
+than with a build error, since Docker just proceeds without a directory
+that was never asked for in the first place.
+
 `scripts/create-owner.ts` is **not** copied into the runtime image — it
 imports the full `src/` source tree (auth/db modules), which the slim
 runner deliberately doesn't carry. Create or update the owner account by
