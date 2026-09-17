@@ -547,6 +547,11 @@ block layout):
   the real avatar file as a base64 data URI — a plain relative `<img
   src="/onlyfans/avatar.png">` doesn't work here since Satori has no
   browser to resolve a relative URL against.
+- `src/app/onlyfans/icon.tsx` — same `ImageResponse` mechanism, Next's
+  file convention for a per-route favicon: gives `/onlyfans` its own
+  32×32 blue/lock tab icon instead of inheriting the main site's
+  favicon. Solid color + inline SVG only, no font/data dependency, so
+  it's prerendered at build time same as the OG image above.
 - `src/lib/og-font.ts`'s `loadPlusJakartaSans()` fetches the actual
   Plus Jakarta Sans font file from Google Fonts' CSS2 API at request/
   build time (Satori has no access to `next/font`, fonts must be passed
