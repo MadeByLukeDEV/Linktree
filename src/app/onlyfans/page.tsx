@@ -18,15 +18,15 @@ import { findOnlyFansAsset } from "./assets";
 // used before any images existed.
 const LOCKED_POSTS = [
   { asset: "posts/1", emoji: "🙃", caption: "Me pretending to be productive today" },
-  { asset: "posts/2", emoji: "🧹", caption: "At your service master" },
+  { asset: "posts/2", emoji: "🧹", caption: "Peak under the Maid Outfit!" },
   { asset: "posts/3", emoji: "🌙", caption: "3am thoughts I probably shouldn't share" },
-  { asset: "posts/4", emoji: "😈", caption: "My villain origin story (redacted)" },
-  { asset: "posts/5", emoji: "🚪", caption: "Rare footage of me leaving the house" },
+  { asset: "posts/4", emoji: "😈", caption: "Take a look at my thighhighs collection" },
+  { asset: "posts/5", emoji: "🚪", caption: "Sneak Peak under the desk while I am streaming" },
   { asset: "posts/6", emoji: "👀", caption: "What actually happens during \"brb 5 min\"" },
 ] as const;
 
-const POST_LIKES = [812, 634, 291, 455, 723, 981];
-const POST_COMMENTS = [64, 41, 18, 33, 52, 77];
+const POST_LIKES = [812, 420, 291, 455, 723, 981];
+const POST_COMMENTS = [64, 69, 18, 33, 52, 77];
 
 // Next's built-in image optimizer only keeps a GIF's first frame when
 // resizing/reformatting it -- unoptimized serves it as-is instead, which
