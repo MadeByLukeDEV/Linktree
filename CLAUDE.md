@@ -401,6 +401,35 @@ invalidation on edit/delete is immediate.
 Requires wildcard DNS (`*.aboutselphy.com`) and matching Dokploy domain
 config in production — see the "Dokploy deployment" section below.
 
+**Static subdomain pages** (`STATIC_SUBDOMAIN_PAGES` in `src/proxy.ts`) are
+a separate, higher-priority mechanism from the dashboard-driven forwards
+above: a hardcoded label → internal path map, checked right after
+extracting the hostname's label but before the reserved/forward split, and
+rewritten (`NextResponse.rewrite`, not `redirect`) straight to a route in
+this app. The browser's URL bar keeps showing the subdomain since it's a
+rewrite. No DB row, no dashboard UI, no Redis cache — purely a
+`proxy.ts`-level routing rule pointing at a normal `src/app/**` page.
+Currently just `onlyfans` → `/onlyfans` (see below); also added to
+`RESERVED_SUBDOMAINS` so a dashboard-created link can never claim the same
+slug and fight the rewrite for it. Adding another one of these means
+adding both the map entry and the reserved-subdomains entry together.
+
+### The `/onlyfans` joke page
+
+Pure frontend parody, no backend at all — every stat/caption in
+`src/app/onlyfans/page.tsx` is hardcoded, nothing reads from `Profile` or
+`SocialLink`. Colors are hardcoded to match the real OnlyFans light theme
+(`#00aff0` accent on white) regardless of the visitor's system dark/light
+preference or this app's own theme, since the joke lands better matching
+the real thing exactly. `SubscribeButton`
+(`src/app/onlyfans/subscribe-button.tsx`) is the only client component on
+the page — its click handler just fires a `sonner` toast punchline, no
+server action, no real subscription flow of any kind. Verified locally
+with `curl -H "Host: onlyfans.aboutselphy.com" http://localhost:3000/`
+(same Host-header-spoofing approach as the dashboard-driven forwards
+above) rendering the joke page's markup, and visually via a Playwright
+screenshot.
+
 ## Twitch live badge
 
 `src/modules/twitch/` shows a small pulsing red dot on the Twitch link's
@@ -667,3 +696,7 @@ page imports it — regardless of whether that page ever actually calls it.
       continuously-active Framer Motion props and dnd-kit's drag
       positioning (see the Frontend conventions section above), which
       doesn't apply here since this list has no drag-and-drop.
+- [x] `onlyfans.aboutselphy.com` joke page — see "Static subdomain pages"
+      under Subdomain forwards above. `STATIC_SUBDOMAIN_PAGES` rewrite in
+      `proxy.ts`, pure-frontend parody page, no DB/dashboard involvement.
+      Verified locally via Host-header spoofing and a screenshot.

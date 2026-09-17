@@ -12,4 +12,7 @@ export const RESERVED_SUBDOMAINS = new Set([
   "mail",
   "ftp",
   "localhost",
+  // Static joke page (src/app/onlyfans/), rewritten straight to a route in
+  // this app by src/proxy.ts -- not a real dashboard-configurable forward.
+  "onlyfans",
 ]);

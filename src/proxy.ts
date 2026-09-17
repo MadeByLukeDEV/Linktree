@@ -6,7 +6,17 @@ import { canAccessDashboard } from "@/modules/auth/roles";
 
 const RESERVED_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
-function extractForwardSubdomain(hostname: string): string | null {
+// Static, code-only subdomain pages -- rewritten (not redirected, so the
+// browser's URL bar keeps showing the subdomain) straight to a route in
+// this app, entirely bypassing the dashboard-driven SocialLink/Redis
+// lookup below. Not a "real" forward: no DB row, no dashboard UI for it.
+// Also listed in RESERVED_SUBDOMAINS so a dashboard-created link can never
+// claim the same slug.
+const STATIC_SUBDOMAIN_PAGES: Record<string, string> = {
+  onlyfans: "/onlyfans",
+};
+
+function extractLabel(hostname: string): string | null {
   if (RESERVED_HOSTS.has(hostname)) {
     return null;
   }
@@ -21,16 +31,19 @@ function extractForwardSubdomain(hostname: string): string | null {
     return null;
   }
 
-  const label = hostname.split(".")[0];
-  if (!label || RESERVED_SUBDOMAINS.has(label)) {
-    return null;
-  }
-  return label;
+  return hostname.split(".")[0] || null;
 }
 
 export async function proxy(request: NextRequest) {
   const hostname = request.headers.get("host")?.split(":")[0] ?? "";
-  const subdomain = extractForwardSubdomain(hostname);
+  const label = extractLabel(hostname);
+
+  const staticPage = label ? STATIC_SUBDOMAIN_PAGES[label] : undefined;
+  if (staticPage) {
+    return NextResponse.rewrite(new URL(staticPage, request.url));
+  }
+
+  const subdomain = label && !RESERVED_SUBDOMAINS.has(label) ? label : null;
 
   if (subdomain) {
     const target = await resolveSubdomain(subdomain);
