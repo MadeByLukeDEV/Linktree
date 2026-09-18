@@ -566,6 +566,47 @@ differ other than the subscription silently stuck in `pending` (or
 they match, then re-registering, is the next step if this recurs — a
 stuck `pending` subscription doesn't self-heal by waiting.
 
+**Regenerated the secret rather than debugging the old one**: the
+original `TWITCH_WEBHOOK_SECRET` was a base64-style value containing
+`+`/`/`/`=` — this project has already hit exactly this class of bug
+before (the MariaDB password needing URL-encoding for the same reason,
+see the Prisma 7 section). Rather than chase whether some layer in the
+Dokploy/env-var pipeline was mangling those specific characters,
+generated a fresh plain-hex secret (`crypto.randomBytes(32).toString
+("hex")` — digits and `a`-`f` only, nothing any parser could
+misinterpret) and set the exact same value in both local `.env` and
+Dokploy, sidestepping the question entirely.
+
+**Actual root cause, found after the secret fix still didn't work**:
+even with a confirmed-matching secret, new registrations still failed
+verification. Proved the secret/code were both actually fine by
+hand-crafting a correctly-signed `webhook_callback_verification`
+request from this dev machine and sending it straight to the
+production URL — it succeeded (200, challenge echoed back exactly),
+which meant the problem was something specific to *Twitch's own
+request*, not the app. Cloudflare's Security Events log confirmed it:
+**Bot Fight Mode** (`ruleId: "bot_fight_mode"`, `action:
+"managed_challenge"`) was intercepting Twitch's delivery
+(`userAgent: "Go-http-client/1.1"`, understandably bot-shaped) and
+serving it a challenge page instead of routing it to the app — Twitch's
+server obviously can't solve a browser challenge, so verification just
+silently failed with no error the app itself could ever have logged or
+detected. Fixed with a Cloudflare WAF custom rule: `URI Path equals
+/api/twitch/eventsub` → **Skip** → Bot Fight Mode, rather than
+disabling bot protection for the whole zone. **Lesson for any future
+webhook integration on this Cloudflare-proxied domain** (Stripe,
+GitHub, etc. would hit the exact same wall): add the same kind of
+path-scoped Bot Fight Mode skip rule up front, rather than rediscovering
+this from scratch — nothing about it shows up in the app's own logs or
+a normal `curl` test, only in Cloudflare's own Security Events log.
+
+`scripts/delete-twitch-subscriptions.ts` (no args deletes every current
+subscription, or pass specific ids) was added during this debugging
+loop — needed because a stale `pending`/`failed` subscription has to be
+removed before a fresh registration for the same type will succeed, and
+this came up repeatedly while iterating (secret fix, then the Cloudflare
+fix, each needing a clean re-registration).
+
 ## SEO & social preview images (OG images)
 
 `src/app/layout.tsx` sets site-wide `Metadata` defaults: `metadataBase`
@@ -903,11 +944,18 @@ page imports it — regardless of whether that page ever actually calls it.
       expanded multiple sections at once, confirmed the label-convention
       examples (handle/description/partner-code) and the LinkedIn
       icon note render correctly.
-- [x] Twitch webhook diagnostics — see "Diagnosing 'the webhook doesn't
-      work'" under Twitch live badge above. Admin-only dashboard tab
-      querying Twitch's actual EventSub subscription status, plus real
-      logging in the webhook route (which previously logged nothing on
-      success at all). Used live to root-cause the reported "webhook
-      doesn't work, no logs" issue down to a likely webhook-secret
-      mismatch between local `.env` and Dokploy's env — see that section
-      for the full diagnosis and next step.
+- [x] Twitch webhook diagnostics + live fix — see "Diagnosing 'the
+      webhook doesn't work'" under Twitch live badge above. Admin-only
+      dashboard tab querying Twitch's actual EventSub subscription
+      status, real logging in the webhook route (previously logged
+      nothing on success at all), and `scripts/delete-twitch-
+      subscriptions.ts`. Root-caused live through two real issues in
+      sequence: a webhook-secret mismatch (fixed by regenerating a
+      plain-hex secret rather than debugging the old base64-style one),
+      then — the actual final blocker — Cloudflare's **Bot Fight Mode**
+      silently challenging Twitch's server-to-server delivery instead of
+      routing it through, invisible to both the app's own logs and a
+      plain `curl` test, only visible in Cloudflare's Security Events
+      log. Fixed with a path-scoped WAF skip rule. Confirmed fully
+      working: both `stream.online`/`stream.offline` subscriptions show
+      `enabled` on Twitch's side.
