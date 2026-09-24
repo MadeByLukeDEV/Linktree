@@ -1,8 +1,7 @@
 "use server";
 
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/modules/auth/server";
+import { getStaffSession } from "@/modules/auth/session";
 import {
   socialLinkSchema,
   linkGroupSchema,
@@ -13,7 +12,7 @@ import { canAccessDashboard } from "@/modules/auth/roles";
 
 // Both roles (owner + moderator) can manage links and groups.
 async function requireDashboardAccess() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getStaffSession();
   if (!session || !canAccessDashboard(session.user.role)) {
     throw new Error("Not authorized");
   }

@@ -37,11 +37,4 @@ ENV PORT=3000
 
 # Applies any pending migrations (safe/idempotent -- migrate deploy only
 # runs migrations not yet recorded) before starting the server.
-#
-# The owner account is NOT created inside this image: scripts/create-owner.ts
-# imports the full src/ source tree (auth/db modules), which this slim
-# runtime image deliberately doesn't carry. Run `pnpm create-owner
-# <email> <password>` from a local checkout with DATABASE_URL pointed at
-# production instead -- the script only needs DB access, not to run inside
-# the container.
 CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm start"]

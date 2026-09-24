@@ -1,7 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
-import { auth } from "@/modules/auth/server";
+import { getStaffSession } from "@/modules/auth/session";
 import { isAdmin } from "@/modules/auth/roles";
 import * as service from "@/modules/twitch/service";
 
@@ -9,7 +8,7 @@ import * as service from "@/modules/twitch/service";
 // a moderator would act on (they can't set env vars or run the
 // registration script either way).
 async function requireAdmin() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getStaffSession();
   if (!session || !isAdmin(session.user.role)) {
     throw new Error("Not authorized");
   }

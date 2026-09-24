@@ -1,8 +1,7 @@
 "use server";
 
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/modules/auth/server";
+import { getStaffSession } from "@/modules/auth/session";
 import { profileSchema } from "@/modules/profile/schema";
 import * as service from "@/modules/profile/service";
 import { isAdmin } from "@/modules/auth/roles";
@@ -12,7 +11,7 @@ type ActionResult = { success: true } | { success: false; error: string };
 // Owner-only: the public display name/bio/avatar, unlike Links, isn't
 // something moderators can change.
 async function requireAdmin() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getStaffSession();
   if (!session || !isAdmin(session.user.role)) {
     throw new Error("Not authorized");
   }

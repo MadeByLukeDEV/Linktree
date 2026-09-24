@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/modules/auth/server";
+import { getStaffSession, loginUrl } from "@/modules/auth/session";
 import { resolveSubdomain } from "@/modules/redirects/service";
 import { RESERVED_SUBDOMAINS } from "@/lib/reserved-subdomains";
 import { canAccessDashboard } from "@/modules/auth/roles";
@@ -58,10 +58,22 @@ export async function proxy(request: NextRequest) {
     );
   }
 
+  // Return URLs are built from NEXT_PUBLIC_SITE_URL rather than request.url,
+  // which is the container's internal address behind Traefik.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? request.url;
+
+  // Old /sign-in bookmarks: a real 307 here, since the page-level redirect()
+  // in src/app/sign-in/page.tsx only runs after the root loading.tsx has
+  // started streaming (it degrades to a meta refresh there).
+  if (request.nextUrl.pathname === "/sign-in") {
+    return NextResponse.redirect(loginUrl(new URL("/dashboard", siteUrl).toString()));
+  }
+
   if (request.nextUrl.pathname.startsWith("/dashboard")) {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getStaffSession(request.cookies);
     if (!session || !canAccessDashboard(session.user.role)) {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
+      const returnTo = new URL(request.nextUrl.pathname + request.nextUrl.search, siteUrl);
+      return NextResponse.redirect(loginUrl(returnTo.toString()));
     }
   }
 

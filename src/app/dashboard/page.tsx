@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { auth } from "@/modules/auth/server";
+import { getStaffSession } from "@/modules/auth/session";
 import { isAdmin } from "@/modules/auth/roles";
-import { PasskeyManager } from "@/modules/auth/components/passkey-manager";
 import { ProfileForm } from "@/modules/profile/components/profile-form";
 import * as profileService from "@/modules/profile/service";
 import { LinkList } from "@/modules/social-links/components/link-list";
@@ -25,7 +23,7 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const [session, profile, groupedLinks, t] = await Promise.all([
-    auth.api.getSession({ headers: await headers() }),
+    getStaffSession(),
     profileService.getProfile(),
     socialLinksService.listGroupedAll(),
     getTranslations("Dashboard"),
@@ -50,7 +48,6 @@ export default async function DashboardPage() {
             {canEditProfile ? (
               <TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
             ) : null}
-            <TabsTrigger value="security">{t("tabs.security")}</TabsTrigger>
             {canEditProfile ? (
               <TabsTrigger value="twitch">{t("tabs.twitch")}</TabsTrigger>
             ) : null}
@@ -71,10 +68,6 @@ export default async function DashboardPage() {
                 <ProfileForm profile={profile} />
               </TabsContent>
             ) : null}
-
-            <TabsContent value="security">
-              <PasskeyManager />
-            </TabsContent>
 
             {canEditProfile ? (
               <TabsContent value="twitch">

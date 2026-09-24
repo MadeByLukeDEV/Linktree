@@ -6,18 +6,6 @@
     "latestVideo": "Latest video",
     "latestShort": "Latest short"
   },
-  "SignIn": {
-    "title": "Sign in",
-    "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in…",
-    "or": "or",
-    "signInWithPasskey": "Sign in with a passkey",
-    "waitingForPasskey": "Waiting for passkey…",
-    "signInFailed": "Sign in failed",
-    "passkeySignInFailed": "Passkey sign in failed"
-  },
   "Dashboard": {
     "title": "Dashboard",
     "welcomeBack": "Welcome back, {name}",
@@ -25,7 +13,6 @@
     "tabs": {
       "links": "Links",
       "profile": "Profile",
-      "security": "Security",
       "twitch": "Twitch",
       "guide": "Guide"
     },
@@ -65,21 +52,6 @@
       "saveProfile": "Save profile",
       "saving": "Saving…",
       "profileSaved": "Profile saved"
-    },
-    "Security": {
-      "heading": "Passkeys",
-      "noPasskeys": "No passkeys registered yet. Add one to sign in with a hardware security key or a passkey manager like Bitwarden instead of your password.",
-      "unnamedPasskey": "Unnamed passkey",
-      "addPasskey": "Add a passkey",
-      "waitingForAuthenticator": "Waiting for authenticator…",
-      "couldNotAddPasskey": "Could not add passkey",
-      "namePlaceholder": "Name this passkey (optional)",
-      "renamePasskey": "Rename",
-      "deletePasskey": "Delete",
-      "passkeyRenamed": "Passkey renamed",
-      "couldNotRenamePasskey": "Could not rename passkey",
-      "passkeyDeleted": "Passkey deleted",
-      "couldNotDeletePasskey": "Could not delete passkey"
     }
   },
   "LocaleSwitcher": {
