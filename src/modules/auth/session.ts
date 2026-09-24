@@ -113,7 +113,11 @@ export function loginUrl(returnTo?: string) {
   return authUrl("/login", returnTo);
 }
 
-/** Central sign-out page (signs out of every aboutselphy admin surface). */
-export function logoutUrl(returnTo?: string) {
-  return authUrl("/logout", returnTo);
+/**
+ * Central sign-out endpoint. POST a form here with a `redirect` field: it ends
+ * the session (every aboutselphy admin surface at once) and 303s straight
+ * back -- one click, no confirmation page.
+ */
+export function signOutEndpoint() {
+  return authUrl("/api/sign-out");
 }
