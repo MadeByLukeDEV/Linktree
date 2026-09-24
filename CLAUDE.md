@@ -100,18 +100,15 @@ Other Prisma 7 changes vs. older knowledge:
   exist for `migrate diff`/`deploy` to work — it's normally created
   automatically by `migrate dev`, which this workflow never runs, so it was
   created by hand once and is now committed.
-- BetterAuth's schema-generator CLI is the **`auth`** npm package (e.g.
-  `pnpm dlx auth@1.7.5 generate --config src/modules/auth/server.ts -y`), not
-  the deprecated `@better-auth/cli`. Regenerate the four auth tables this way
-  after changing `src/modules/auth/server.ts`, then reapply the diff workflow
-  above for the resulting schema change.
-- `dotenv` and `tsx` are regular `dependencies`, not `devDependencies`, even
-  though that looks wrong at a glance. `prisma7.config.ts` unconditionally
-  `import`s `dotenv/config`, and that file is read by the `prisma` CLI on
-  every invocation including `migrate deploy` in production — a
-  production-only (`pnpm install --prod`) install would otherwise be
-  missing `dotenv` and fail. `tsx` runs `scripts/create-owner.ts`, which is
-  meant to be run against production too (see "Dokploy deployment" below).
+- `dotenv` and `tsx` are regular `dependencies`, not `devDependencies`,
+  even though that looks wrong at a glance:
+  - `prisma7.config.ts` unconditionally `import`s `dotenv/config`, and the
+    `prisma` CLI reads that file on every invocation, including
+    `migrate deploy` in production. A production-only
+    (`pnpm install --prod`) install would otherwise be missing `dotenv` and
+    fail.
+  - `tsx` runs the `scripts/*.ts` helpers (e.g. `register-twitch-webhook`),
+    which are meant to be run against production too.
 
 ## Modular monolith architecture
 
@@ -254,9 +251,9 @@ pnpm exec prisma studio           # inspect the DB
 ## Environment variables
 
 See [.env.example](.env.example): `DATABASE_URL`, `REDIS_URL`,
-`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PASSKEY_RP_ID` (leave unset in dev
-— defaults to `localhost`; set to the production domain, e.g.
-`aboutselphy.com`, once deployed), `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`,
+`AUTH_URL`, `AUTH_DATABASE_URL`, `AUTH_DATABASE_SCHEMA`,
+`BETTER_AUTH_SECRET`, `AUTH_COOKIE_PREFIX` (all for validating central auth
+sessions — see "Auth" below), `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`,
 `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ROOT_DOMAIN`. The user provides
 `DATABASE_URL` and `REDIS_URL` directly — no local Docker MariaDB/Redis
 containers for dev.
@@ -296,79 +293,77 @@ assuming a code bug.
 
 ## Auth
 
-No public sign-up route — accounts are provisioned by hand via scripts.
-`src/modules/auth/server.ts` wires up BetterAuth with the Prisma adapter,
-the **admin** plugin (`defaultRole` is `"user"`, but nothing ever creates a
-`"user"` row — see roles below), and the **`@better-auth/passkey`** plugin
-so any account can sign in with a hardware security key or a passkey
-manager like Bitwarden instead of a password (WebAuthn is
-authenticator-agnostic — both work the same way from the app's side).
-`nextCookies()` must stay last in the `plugins` array.
+This app has **no auth instance of its own**. Staff sign in on the central
+auth service, `auth.aboutselphy.com` (separate repo `../Auth`): Discord
+OAuth, with the role derived from the user's Discord server roles on every
+sign-in. That service sets a session cookie on `.aboutselphy.com`, and this
+app validates it in `src/modules/auth/session.ts`:
+
+- It verifies the cookie's HMAC signature (`<token>.<base64 HMAC-SHA256>`,
+  keyed with `BETTER_AUTH_SECRET`, the same value as the auth service).
+- It then reads `session` + `user` straight from the auth service's
+  Postgres schema (`AUTH_DATABASE_URL` / `AUTH_DATABASE_SCHEMA`).
+- The pool is created on first use (a plain `pg` Pool), like
+  `src/lib/prisma.ts`.
+
+This is a copy of the auth repo's `consumer/validate-session.ts`, so keep
+the two in sync. `getStaffSession()` fails closed: if the auth DB is
+unreachable, the error is logged and the user is treated as signed out.
+
+- **Sign-in:** `/sign-in` just redirects to `loginUrl()`, and the proxy
+  redirects signed-out `/dashboard` requests there with
+  `?redirect=<original URL>`. The return URL is built from
+  `NEXT_PUBLIC_SITE_URL`, not `request.url`, which is the container's
+  internal address behind Traefik.
+- **Sign-out:** a link to the auth service's `/logout`, which signs out of
+  every aboutselphy admin surface at once.
+- **What was removed:** email/password login, passkeys, the Security tab,
+  `/api/auth/*` and the `create-owner`/`create-moderator` scripts. There
+  are no accounts to provision. Access follows the Discord moderator/admin
+  roles, configured on the auth service.
+- **Leftover tables:** the old BetterAuth tables in MariaDB (`user`,
+  `session`, `account`, `verification`, `passkey`) and their Prisma models
+  are still there, unused. Dev and prod share that database, so dropping
+  them is a deliberate separate migration, not part of the switch.
 
 ### Roles
 
-`src/modules/auth/roles.ts` defines the two roles actually used, with
-helpers (`isAdmin`, `canAccessDashboard`) consumed by every authorization
-check below instead of comparing role strings inline:
+`src/modules/auth/roles.ts` defines the two roles, with helpers
+(`isAdmin`, `canAccessDashboard`) that every authorization check below uses
+instead of comparing role strings inline:
 
-- **`admin`** (the owner) — full dashboard access, including the Profile
-  tab (public display name/bio/avatar).
-- **`moderator`** — can manage Links (the `SocialLink` table is a single
-  shared list for the whole site, not per-user — a moderator edits the
-  *same* links the owner and every other moderator see, there's no
-  per-account link ownership) and their own passkeys (inherently scoped
-  per-session by BetterAuth already). Cannot see or edit Profile.
+- **`admin`** (the owner): full dashboard access, including the Profile tab
+  (public display name/bio/avatar) and Twitch diagnostics.
+- **`moderator`**: can manage Links but cannot see or edit Profile. The
+  `SocialLink` table is one shared list for the whole site, so a moderator
+  edits the *same* links as the owner and every other moderator. There's no
+  per-account link ownership.
 
-Enforced in three places, all going through `roles.ts` rather than
-duplicating the role check: `src/proxy.ts` (redirects to `/sign-in` if
-`!canAccessDashboard`), `requireDashboardAccess()` in
-`social-links/actions.ts` (both roles), and `requireAdmin()` in
-`profile/actions.ts` (admin only). The dashboard page also hides the
-Profile *tab* client-side for moderators (`isAdmin(session.user.role)`)
-as a UX nicety — the server-side `requireAdmin()` check is what actually
-matters for security, the hidden tab just avoids showing a form that
-would reject the submit.
+These are enforced in four places, all through `roles.ts`:
+- `src/proxy.ts`: redirects to the central login if `!canAccessDashboard`.
+- `requireDashboardAccess()` in `social-links/actions.ts`: both roles.
+- `requireAdmin()` in `profile/actions.ts`: admin only.
+- `requireAdmin()` in `twitch/actions.ts`: admin only.
 
-- Create/update the owner account: `pnpm create-owner <email> <password>
-  [name]` (or `OWNER_EMAIL`/`OWNER_PASSWORD`/`OWNER_NAME` env vars) —
-  `scripts/create-owner.ts`, calls `auth.api.signUpEmail` then promotes the
-  user to `role: "admin"` via Prisma directly.
-- Create a moderator account: `pnpm create-moderator <email> <password>
-  [name]` (or `MODERATOR_EMAIL`/`MODERATOR_PASSWORD`/`MODERATOR_NAME` env
-  vars) — `scripts/create-moderator.ts`, mirrors `create-owner.ts` but
-  promotes to `role: "moderator"` instead. There's no in-dashboard
-  "invite a mod" UI; new mod accounts are always provisioned this way.
-- `src/proxy.ts` protects `/dashboard/**` by calling
-  `auth.api.getSession({ headers })` directly (safe because Next 16's
-  `proxy` always runs in the Node.js runtime) and redirecting to `/sign-in`
-  when there's no session or the session's role fails
-  `canAccessDashboard`.
+The dashboard page also hides the Profile *tab* for moderators
+(`isAdmin(session.user.role)`) as a UX nicety. The server-side
+`requireAdmin()` check is what actually matters for security; the hidden
+tab just avoids showing a form that would reject the submit.
+
+- **Local dev:** run the auth service on one localhost port and this app on
+  another (e.g. `pnpm dev -p 3001`). Cookies aren't port-scoped, so the
+  auth service's host-only dev cookie reaches this app too. Add this app's
+  dev origin to the auth service's `TRUSTED_ORIGINS`, or the post-login
+  redirect falls back to its `DEFAULT_REDIRECT_URL`.
 - The dashboard header shows `session.user.name` (the signed-in account's
   own name) — **not** `profile.displayName` (the site's public-facing
   name shown on the linktree page itself). These were conflated in an
   earlier version, which would have shown the owner's public display name
   to a signed-in moderator instead of the moderator's own name; caught
   while testing this feature, fixed in `src/app/dashboard/page.tsx`.
-- Passkey registration/authentication is a real WebAuthn ceremony and can't
-  be driven headlessly — verified everything else (redirect-when-signed-out,
-  email/password sign-in, dashboard render, sign-out, role-based tab
-  visibility) with Playwright scripts against the dev server; the "Add a
-  passkey" / "Sign in with a passkey" buttons need a manual check in an
-  actual browser with a key or Bitwarden set up. Passkeys are always
-  scoped to the signed-in account by BetterAuth, so a moderator managing
-  their own passkeys in the Security tab can't see or touch the owner's.
-- Passkeys can be named on registration (`authClient.passkey.addPasskey({
-  name })`) and renamed/deleted afterward (`authClient.passkey.updatePasskey
-  ({ id, name })` / `.deletePasskey({ id })`, in `PasskeyManager`). Neither
-  method appears in `@better-auth/passkey`'s `client.d.mts` — they're
-  inferred client-side from the server plugin's type rather than hand-
-  declared (confirmed by `tsc --noEmit` passing, since static grep alone
-  couldn't confirm it); the plugin's own source comments document the exact
-  client method names this relies on.
-- Local dev and production share the same database — any test account or
-  test link created while verifying auth/role changes is immediately live
-  on the real site and must be deleted again after testing, not left
-  behind.
+- Local dev and production share the same database — any test link
+  created while verifying auth/role changes is immediately live on the
+  real site and must be deleted again after testing, not left behind.
 
 ### Dashboard guide tab
 
@@ -378,8 +373,8 @@ for moderators covering how to add/edit links, the Platform vs. Label
 field distinction (Label has no fixed format — it's used for a handle, a
 short description, or a `Code: ...`-prefixed partner/referral code
 depending on the link), which platform names get an automatic brand icon
-and which need a manual Icon URL, groups, subdomain forwards, passkeys,
-and what moderators can't do. Built with shadcn's `Accordion`
+and which need a manual Icon URL, groups, subdomain forwards, signing in
+with Discord, and what moderators can't do. Built with shadcn's `Accordion`
 (`multiple` prop, so several sections can stay open at once) so it's
 scannable rather than one long wall of text.
 
@@ -750,22 +745,19 @@ here infers it automatically, and a missing one fails silently rather
 than with a build error, since Docker just proceeds without a directory
 that was never asked for in the first place.
 
-`scripts/create-owner.ts` is **not** copied into the runtime image — it
-imports the full `src/` source tree (auth/db modules), which the slim
-runner deliberately doesn't carry. Create or update the owner account by
-running `pnpm create-owner <email> <password>` from a local checkout with
-`DATABASE_URL` pointed at the production database — the script only needs
-DB access, not to run inside the container.
-
 **Required environment variables in Dokploy** (see `.env.example`):
-`DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (the
-real `https://social.aboutselphy.com`), `PASSKEY_RP_ID` (`aboutselphy.com`
-— must match the real domain or WebAuthn will reject registration/auth),
-`YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`, `NEXT_PUBLIC_SITE_URL` (same as
-`BETTER_AUTH_URL`), `NEXT_PUBLIC_ROOT_DOMAIN` (`aboutselphy.com`),
-`TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_BROADCASTER_LOGIN`,
-`TWITCH_WEBHOOK_SECRET` (all optional — see the "Twitch live badge"
-section below). After deploying with those set, run `pnpm
+- `DATABASE_URL`, `REDIS_URL`
+- `AUTH_URL` (`https://auth.aboutselphy.com`), `AUTH_DATABASE_URL`,
+  `AUTH_DATABASE_SCHEMA`, `BETTER_AUTH_SECRET` (the auth service's value),
+  `AUTH_COOKIE_PREFIX`
+- `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`
+- `NEXT_PUBLIC_SITE_URL` (the real `https://social.aboutselphy.com`),
+  `NEXT_PUBLIC_ROOT_DOMAIN` (`aboutselphy.com`)
+- `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_BROADCASTER_LOGIN`,
+  `TWITCH_WEBHOOK_SECRET` (all optional — see the "Twitch live badge"
+  section below)
+
+After deploying with those set, run `pnpm
 register-twitch-webhook` locally (against the production `DATABASE_URL`/
 env) to actually create the EventSub subscriptions — the env vars alone
 don't register anything with Twitch.
@@ -777,7 +769,10 @@ Phase 5 subdomain forwards — every forward hostname must route to this
 same service, since `src/proxy.ts` is what actually resolves and redirects
 them) — requires a wildcard DNS record for `*.aboutselphy.com` pointing at
 the Dokploy server, plus a matching wildcard domain/rule in Dokploy's
-reverse proxy config for this app.
+reverse proxy config for this app. `auth.aboutselphy.com` is a separate
+Dokploy app with its own explicit host rule. Traefik prefers that specific
+rule over this wildcard, and `auth` is also in `RESERVED_SUBDOMAINS` so a
+dashboard forward can never claim it.
 
 **Docker isn't available in this dev sandbox**, so `docker build` has never
 been run here directly — the first real build happened on Dokploy itself,
@@ -835,7 +830,8 @@ page imports it — regardless of whether that page ever actually calls it.
       migrated against the real DB
 - [x] Phase 2 — BetterAuth (admin + passkey plugins), sign-in page (password
       and passkey), `/dashboard` route protection via `proxy.ts`,
-      `pnpm create-owner` bootstrap script
+      `pnpm create-owner` bootstrap script *(replaced by the central
+      Discord auth service — see "Auth")*
 - [x] Phase 3 — `social-links` + `profile` modules, dashboard CRUD: tabbed
       dashboard (Links/Profile/Security), drag-to-reorder link list
       (`@dnd-kit`), create/edit dialog with subdomain-slug validation and a

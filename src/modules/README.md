@@ -24,7 +24,7 @@ self-contained modules with enforced boundaries.
 
 | Module         | Owns                                              | Depends on            |
 |----------------|----------------------------------------------------|-----------------------|
-| `auth`         | BetterAuth instance, admin plugin, session helpers | —                      |
+| `auth`         | Central-auth session validation, role helpers      | —                      |
 | `social-links` | `SocialLink` + `LinkGroup` tables (CRUD, ordering, dashboard UI) | —        |
 | `profile`      | Owner display name/bio/avatar                      | —                      |
 | `redirects`    | Subdomain → target URL resolution + Redis cache    | `social-links` (read-only, via its service) |
