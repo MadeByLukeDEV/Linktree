@@ -20,7 +20,7 @@ const AUTO_ICON_PLATFORMS = [
 
 const RESERVED_WORDS = [
   "www", "social", "api", "app", "admin", "dashboard", "mail", "ftp",
-  "localhost", "onlyfans",
+  "localhost", "auth", "onlyfans",
 ];
 
 export function DashboardGuide() {
@@ -47,7 +47,9 @@ export function DashboardGuide() {
               to a real profile URL.
             </p>
             <p>
-              There are two kinds of accounts:
+              You sign in with your <strong>Discord account</strong> — the
+              same login works on every aboutselphy admin page. What you can
+              do here depends on your role on the aboutselphy Discord server:
             </p>
             <ul className="list-disc pl-5">
               <li>
@@ -59,9 +61,9 @@ export function DashboardGuide() {
                 every link on the{" "}
                 <strong>Links</strong> tab (the same shared list the owner
                 and every other moderator sees — it&apos;s one list for the
-                whole site, not separate per person) and your own passkeys
-                on the <strong>Security</strong> tab. The Profile tab isn&apos;t
-                shown to moderators at all — that part is owner-only.
+                whole site, not separate per person). The Profile tab
+                isn&apos;t shown to moderators at all — that part is
+                owner-only.
               </li>
             </ul>
           </AccordionContent>
@@ -243,30 +245,28 @@ export function DashboardGuide() {
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="security">
-          <AccordionTrigger>Security — passkeys</AccordionTrigger>
+        <AccordionItem value="sign-in">
+          <AccordionTrigger>Signing in and out</AccordionTrigger>
           <AccordionContent>
             <p>
-              The Security tab manages passkeys for{" "}
-              <strong>your own account only</strong> — nobody, including
-              the owner, can see or touch another account&apos;s passkeys.
-              A passkey lets you sign in with your device&apos;s
-              fingerprint/face unlock, a hardware security key, or a
-              password manager like Bitwarden, instead of typing your
-              password every time.
+              Sign-in goes through{" "}
+              <strong>auth.aboutselphy.com</strong> with your Discord
+              account. There&apos;s no separate password or account for this
+              dashboard — access comes from your moderator role on the
+              Discord server.
             </p>
             <ul className="list-disc pl-5">
               <li>
-                <strong>Add one</strong>: click add, give it a name (e.g.
-                &quot;Work laptop&quot;), and follow your browser or
-                device&apos;s prompt.
+                If your Discord role changes, it takes effect the next time
+                you sign in.
               </li>
               <li>
-                <strong>Rename or remove one</strong>: use the pencil or
-                trash icon next to it.
+                <strong>Sign out</strong> signs you out of every aboutselphy
+                admin page at once, not just this one.
               </li>
               <li>
-                You can have more than one passkey (e.g. one per device).
+                To keep your account safe, turn on two-factor authentication
+                in Discord — it protects this dashboard too.
               </li>
             </ul>
           </AccordionContent>
@@ -282,9 +282,9 @@ export function DashboardGuide() {
                 all. If it needs to change, ask the owner.
               </li>
               <li>
-                <strong>Create other accounts</strong> — new moderator
-                accounts are only created by the owner, from outside this
-                dashboard.
+                <strong>Give anyone else access</strong> — dashboard access
+                follows the moderator role on the Discord server, which only
+                the owner hands out.
               </li>
             </ul>
           </AccordionContent>
