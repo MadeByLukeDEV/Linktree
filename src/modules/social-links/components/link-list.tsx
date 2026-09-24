@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -144,6 +144,10 @@ function LinkBucket({
   onUpdated: (link: SocialLink) => void;
 }) {
   const sensors = useSensors(useSensor(PointerSensor));
+  // dnd-kit otherwise numbers its accessibility ids ("DndDescribedBy-N")
+  // from a module-level counter, which differs between the server render and
+  // hydration -> aria-describedby hydration mismatch. useId() is stable.
+  const dndId = useId();
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -155,6 +159,7 @@ function LinkBucket({
 
   return (
     <DndContext
+      id={dndId}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
@@ -279,6 +284,8 @@ export function LinkList({
   const [ungrouped, setUngrouped] = useState(initialUngrouped);
   const [groups, setGroups] = useState(initialGroups);
   const groupSensors = useSensors(useSensor(PointerSensor));
+  // Stable dnd-kit id -- see LinkBucket.
+  const groupsDndId = useId();
 
   const plainGroups: LinkGroup[] = groups.map((g) => ({
     id: g.id,
@@ -506,6 +513,7 @@ export function LinkList({
 
           {groups.length > 0 ? (
             <DndContext
+              id={groupsDndId}
               sensors={groupSensors}
               collisionDetection={closestCenter}
               onDragEnd={handleGroupDragEnd}
