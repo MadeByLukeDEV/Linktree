@@ -175,6 +175,10 @@ prisma/
   would both be fighting to own `transform` on every frame) and was
   deliberately left out; add hover feedback via non-transform CSS (e.g.
   `hover:shadow-md`, already present) instead.
+- **Every `DndContext` needs `id={useId()}`.** Without it, dnd-kit numbers
+  its `aria-describedby="DndDescribedBy-N"` ids from a module-level counter
+  that differs between the server render and hydration. That caused a
+  hydration mismatch on the dashboard's link/group lists (`link-list.tsx`).
 - **Units: always `rem`, never `px`.** This includes the min/max bounds of
   any `clamp()` — e.g. `clamp(1rem, 2vw, 1.75rem)`, not
   `clamp(16px, 2vw, 28px)`.
@@ -315,8 +319,12 @@ unreachable, the error is logged and the user is treated as signed out.
   `?redirect=<original URL>`. The return URL is built from
   `NEXT_PUBLIC_SITE_URL`, not `request.url`, which is the container's
   internal address behind Traefik.
-- **Sign-out:** a link to the auth service's `/logout`, which signs out of
-  every aboutselphy admin surface at once.
+- **Sign-out:** `SignOutButton` is a plain form POST to the auth service's
+  `/api/sign-out`, with `redirect=NEXT_PUBLIC_SITE_URL`. That ends the
+  session on every aboutselphy admin surface at once and 303s straight back
+  to the link tree, with no confirmation page. The endpoint only accepts
+  POSTs whose `Origin` is in the auth service's `TRUSTED_ORIGINS`, so this
+  app's origin (including its localhost dev origin) must be listed there.
 - **What was removed:** email/password login, passkeys, the Security tab,
   `/api/auth/*` and the `create-owner`/`create-moderator` scripts. There
   are no accounts to provision. Access follows the Discord moderator/admin
