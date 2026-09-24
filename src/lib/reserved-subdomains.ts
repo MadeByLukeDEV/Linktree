@@ -12,6 +12,9 @@ export const RESERVED_SUBDOMAINS = new Set([
   "mail",
   "ftp",
   "localhost",
+  // Central auth service (separate Dokploy app) -- a forward on this label
+  // would shadow the staff login for every aboutselphy admin surface.
+  "auth",
   // Static joke page (src/app/onlyfans/), rewritten straight to a route in
   // this app by src/proxy.ts -- not a real dashboard-configurable forward.
   "onlyfans",
