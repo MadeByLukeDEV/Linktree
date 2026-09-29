@@ -165,6 +165,12 @@ prisma/
   (`src/modules/theme/components/theme-toggle.tsx`) and `CustomCursor.
   useIsFinePointer` (checks `matchMedia`) — copy that pattern rather than
   the classic `useEffect(() => setMounted(true), [])` idiom.
+- **next-themes script** (2026-09-29, same fix as the Main app):
+  `ThemeProvider` passes `scriptProps.type` = `text/javascript` on the
+  server and `application/json` in the browser. The server copy runs; a
+  client-created copy never runs anyway, and the data type stops React 19's
+  "Encountered a script tag while rendering React component" error. Don't
+  remove it.
 - **Framer Motion + dnd-kit on the same element**: `SortableLinkRow`
   (`src/modules/social-links/components/link-list.tsx`) is both a dnd-kit
   sortable ref (owns `style.transform` for drag positioning) and a
