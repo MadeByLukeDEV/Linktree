@@ -309,6 +309,12 @@ app validates it in `src/modules/auth/session.ts`:
   Postgres schema (`AUTH_DATABASE_URL` / `AUTH_DATABASE_SCHEMA`).
 - The pool is created on first use (a plain `pg` Pool), like
   `src/lib/prisma.ts`.
+- Access is checked against the **session's** role
+  (`coalesce(s.role, u.role)`), not the user's. The auth service also has
+  Twitch/YouTube logins for viewers, but only a Discord sign-in gets a staff
+  role, so a mod's Twitch session is a viewer session here. Sessions created
+  before per-session roles existed have no `s.role` (they were all Discord
+  sign-ins) and fall back to `u.role`.
 
 This is a copy of the auth repo's `consumer/validate-session.ts`, so keep
 the two in sync. `getStaffSession()` fails closed: if the auth DB is
