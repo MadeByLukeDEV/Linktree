@@ -165,6 +165,18 @@ prisma/
   (`src/modules/theme/components/theme-toggle.tsx`) and `CustomCursor.
   useIsFinePointer` (checks `matchMedia`) — copy that pattern rather than
   the classic `useEffect(() => setMounted(true), [])` idiom.
+- **Security headers** (2026-09-29, same set as the Main app): static
+  headers in `next.config.ts` (HSTS in production, nosniff,
+  Referrer-Policy, `X-Frame-Options: DENY`, COOP, Permissions-Policy,
+  `poweredByHeader: false`) and a per-request nonce CSP from `src/proxy.ts`
+  (`withCsp()`, on `next()` and the static-subdomain rewrite) built in
+  `src/lib/security/csp.ts`. The root layout passes `x-nonce` to
+  `ThemeProvider` (next-themes' inline script). `img-src` allows any
+  `https:` because the avatar and "Icon URL" overrides are arbitrary URLs;
+  `frame-src 'none'` (the YouTube card links out); `form-action` = self +
+  the auth service (sign-out POST). Add origins only with the feature that
+  needs them. Checked on a production build: every script carries the
+  nonce, theme applies in dark/light, external images load, no CSP errors.
 - **next-themes script** (2026-09-29, same fix as the Main app):
   `ThemeProvider` passes `scriptProps.type` = `text/javascript` on the
   server and `application/json` in the browser. The server copy runs; a

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
+import { headers } from "next/headers";
 import { ThemeProvider } from "@/modules/theme/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { AnimatedBackground } from "@/components/effects/animated-background";
@@ -42,6 +43,9 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = await getLocale();
+  // Set by src/proxy.ts. next-themes' pre-paint script is inline, so it
+  // needs the CSP nonce or the browser blocks it.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html
@@ -50,7 +54,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${fontSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>
+        <ThemeProvider nonce={nonce}>
           <NextIntlClientProvider>
             <AnimatedBackground />
             <CustomCursor />

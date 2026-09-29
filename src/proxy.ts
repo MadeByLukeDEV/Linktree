@@ -3,6 +3,23 @@ import { getStaffSession, loginUrl } from "@/modules/auth/session";
 import { resolveSubdomain } from "@/modules/redirects/service";
 import { RESERVED_SUBDOMAINS } from "@/lib/reserved-subdomains";
 import { canAccessDashboard } from "@/modules/auth/roles";
+import { buildCsp, createNonce } from "@/lib/security/csp";
+
+const CSP_HEADER = "Content-Security-Policy";
+
+/**
+ * Request headers carrying a fresh nonce + CSP (Next reads the nonce from the
+ * request's CSP header and applies it to its own scripts; the layout reads
+ * x-nonce for next-themes), and the policy for the response.
+ */
+function withCsp(request: NextRequest) {
+  const nonce = createNonce();
+  const csp = buildCsp(nonce, new URL(process.env.AUTH_URL ?? "https://auth.aboutselphy.com").origin);
+  const headers = new Headers(request.headers);
+  headers.set("x-nonce", nonce);
+  headers.set(CSP_HEADER, csp);
+  return { headers, csp };
+}
 
 const RESERVED_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
@@ -40,7 +57,10 @@ export async function proxy(request: NextRequest) {
 
   const staticPage = label ? STATIC_SUBDOMAIN_PAGES[label] : undefined;
   if (staticPage) {
-    return NextResponse.rewrite(new URL(staticPage, request.url));
+    const { headers, csp } = withCsp(request);
+    const response = NextResponse.rewrite(new URL(staticPage, request.url), { request: { headers } });
+    response.headers.set(CSP_HEADER, csp);
+    return response;
   }
 
   const subdomain = label && !RESERVED_SUBDOMAINS.has(label) ? label : null;
@@ -77,7 +97,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  const { headers, csp } = withCsp(request);
+  const response = NextResponse.next({ request: { headers } });
+  response.headers.set(CSP_HEADER, csp);
+  return response;
 }
 
 export const config = {
