@@ -102,7 +102,13 @@ export async function getStaffSession(
   try {
     return await lookupSession(token);
   } catch (error) {
-    console.error("Session lookup against the auth database failed", error);
+    // Name and code only: a whole pg error can carry query details and
+    // connection info.
+    const code = (error as { code?: unknown } | null)?.code;
+    console.error("Session lookup against the auth database failed", {
+      name: error instanceof Error ? error.name : typeof error,
+      ...(typeof code === "string" ? { code } : {}),
+    });
     return null;
   }
 }
